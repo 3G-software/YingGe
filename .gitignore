@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.cache
+
+.idea
+.claude
+
+*.iml
+
+package-lock.json
+
+# Rust
+target/
+Cargo.lock
