@@ -70,6 +70,9 @@ export const getAssetFilePath = (id: string) =>
 export const getThumbnailPath = (id: string) =>
   invoke<string | null>("get_thumbnail_path", { id });
 
+export const getThumbnailData = (id: string) =>
+  invoke<string | null>("get_thumbnail_data", { id });
+
 // --- Tag ---
 
 export const createTag = (

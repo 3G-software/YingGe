@@ -1,19 +1,13 @@
 import { useState } from "react";
-import {
-  FolderOpen,
-  Plus,
-  Tags,
-  Settings,
-  Wrench,
-  Puzzle,
-  Image,
-} from "lucide-react";
+import { FolderOpen, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
 import { useFolders } from "../../hooks/useAssets";
 import { useLibraries, useCreateLibrary } from "../../hooks/useLibrary";
 import type { Library as LibraryType } from "../../types/asset";
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const {
     currentLibrary,
     setCurrentLibrary,
@@ -46,45 +40,18 @@ export function Sidebar() {
     }
   };
 
-  const navItems = [
-    { icon: Image, label: "All Assets", action: () => setCurrentFolder("/") },
-    {
-      icon: Tags,
-      label: "Tags",
-      action: () =>
-        (window.location.hash = "#/tags"),
-    },
-    {
-      icon: Wrench,
-      label: "Tools",
-      action: () =>
-        (window.location.hash = "#/tools"),
-    },
-    {
-      icon: Puzzle,
-      label: "Plugins",
-      action: () =>
-        (window.location.hash = "#/plugins"),
-    },
-    {
-      icon: Settings,
-      label: "Settings",
-      action: () =>
-        (window.location.hash = "#/settings"),
-    },
-  ];
-
   return (
     <aside className="w-60 h-full flex flex-col border-r border-border bg-bg-secondary">
       {/* Library Selector */}
       <div className="p-3 border-b border-border">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-            Library
+            {t('library.title')}
           </span>
           <button
             onClick={() => setShowNewLibrary(!showNewLibrary)}
             className="p-1 rounded hover:bg-bg-tertiary text-text-secondary hover:text-text-primary transition-colors"
+            title={t('library.create')}
           >
             <Plus size={14} />
           </button>
@@ -93,14 +60,14 @@ export function Sidebar() {
           <div className="mb-2 space-y-2">
             <input
               type="text"
-              placeholder="Library name"
+              placeholder={t('library.name')}
               value={newLibName}
               onChange={(e) => setNewLibName(e.target.value)}
               className="w-full px-2 py-1 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             />
             <input
               type="text"
-              placeholder="Path (e.g. ~/Assets)"
+              placeholder={t('library.path')}
               value={newLibPath}
               onChange={(e) => setNewLibPath(e.target.value)}
               className="w-full px-2 py-1 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
@@ -110,7 +77,7 @@ export function Sidebar() {
               disabled={!newLibName || !newLibPath}
               className="w-full px-2 py-1 text-sm bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 transition-colors"
             >
-              Create
+              {t('library.create')}
             </button>
           </div>
         )}
@@ -122,7 +89,7 @@ export function Sidebar() {
           }}
           className="w-full px-2 py-1.5 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
         >
-          <option value="">Select library...</option>
+          <option value="">{t('library.noLibraries')}</option>
           {libraries?.map((lib: LibraryType) => (
             <option key={lib.id} value={lib.id}>
               {lib.name}
@@ -131,25 +98,11 @@ export function Sidebar() {
         </select>
       </div>
 
-      {/* Navigation */}
-      <nav className="p-2 space-y-0.5">
-        {navItems.map(({ icon: Icon, label, action }) => (
-          <button
-            key={label}
-            onClick={action}
-            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded transition-colors"
-          >
-            <Icon size={16} />
-            {label}
-          </button>
-        ))}
-      </nav>
-
       {/* Folders */}
       {currentLibrary && (
-        <div className="flex-1 overflow-y-auto p-2 border-t border-border">
+        <div className="flex-1 overflow-y-auto p-2">
           <div className="text-xs font-medium text-text-secondary uppercase tracking-wider px-2 mb-2">
-            Folders
+            {t('sidebar.folders', 'Folders')}
           </div>
           <button
             onClick={() => setCurrentFolder("/")}
@@ -160,7 +113,7 @@ export function Sidebar() {
             }`}
           >
             <FolderOpen size={14} />
-            Root
+            {t('sidebar.root', 'Root')}
           </button>
           {folders?.map((folder) => (
             <button

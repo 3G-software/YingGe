@@ -1,6 +1,7 @@
 use sqlx::SqlitePool;
 use tauri::State;
 use uuid::Uuid;
+use base64::Engine;
 
 use crate::db::{
     models::{Asset, AssetDetail, FolderInfo, PaginatedAssets},
@@ -51,6 +52,12 @@ pub async fn import_assets(
     folder_path: String,
     pool: State<'_, SqlitePool>,
 ) -> Result<Vec<Asset>, AppError> {
+    // Debug logging
+    tracing::info!("import_assets called with {} paths", file_paths.len());
+    for (i, path) in file_paths.iter().enumerate() {
+        tracing::info!("  Path {}: {}", i, path);
+    }
+
     // Get library root path
     let library = queries::get_library(&pool, &library_id).await?;
     let library_root = std::path::PathBuf::from(&library.root_path);
@@ -59,8 +66,12 @@ pub async fn import_assets(
     let mut all_files = Vec::new();
     for file_path_str in &file_paths {
         let path = std::path::Path::new(file_path_str);
-        all_files.extend(collect_files(path));
+        let collected = collect_files(path);
+        tracing::info!("Collected {} files from path: {}", collected.len(), file_path_str);
+        all_files.extend(collected);
     }
+
+    tracing::info!("Total files to import: {}", all_files.len());
 
     let mut imported = Vec::new();
 
@@ -198,6 +209,30 @@ pub async fn delete_assets(
     ids: Vec<String>,
     pool: State<'_, SqlitePool>,
 ) -> Result<(), AppError> {
+    // Get asset details before deleting from database
+    for id in &ids {
+        let asset = queries::get_asset(&pool, id).await?;
+        let library = queries::get_library(&pool, &asset.library_id).await?;
+        let library_root = std::path::Path::new(&library.root_path);
+
+        // Delete the actual file
+        let file_path = library_root.join(&asset.relative_path);
+        if file_path.exists() {
+            tracing::info!("Deleting file: {:?}", file_path);
+            std::fs::remove_file(&file_path)?;
+        }
+
+        // Delete the thumbnail if it exists
+        if let Some(thumb_rel) = &asset.thumbnail_path {
+            let thumb_path = library_root.join(thumb_rel);
+            if thumb_path.exists() {
+                tracing::info!("Deleting thumbnail: {:?}", thumb_path);
+                std::fs::remove_file(&thumb_path)?;
+            }
+        }
+    }
+
+    // Delete from database
     queries::delete_assets(&pool, &ids).await?;
     Ok(())
 }
@@ -244,6 +279,38 @@ pub async fn get_thumbnail_path(
         let library = queries::get_library(&pool, &asset.library_id).await?;
         let full_path = std::path::Path::new(&library.root_path).join(thumb_rel);
         Ok(Some(full_path.to_string_lossy().to_string()))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Get thumbnail as base64 encoded data URL
+#[tauri::command]
+pub async fn get_thumbnail_data(
+    id: String,
+    pool: State<'_, SqlitePool>,
+) -> Result<Option<String>, AppError> {
+    let asset = queries::get_asset(&pool, &id).await?;
+    if let Some(thumb_rel) = &asset.thumbnail_path {
+        let library = queries::get_library(&pool, &asset.library_id).await?;
+        let full_path = std::path::Path::new(&library.root_path).join(thumb_rel);
+
+        // Read the file
+        let data = std::fs::read(&full_path)?;
+
+        // Encode as base64
+        let base64_data = base64::engine::general_purpose::STANDARD.encode(&data);
+
+        // Determine MIME type based on file extension
+        let mime_type = match full_path.extension().and_then(|s| s.to_str()) {
+            Some("png") => "image/png",
+            Some("jpg") | Some("jpeg") => "image/jpeg",
+            Some("gif") => "image/gif",
+            Some("webp") => "image/webp",
+            _ => "image/png", // default
+        };
+
+        Ok(Some(format!("data:{};base64,{}", mime_type, base64_data)))
     } else {
         Ok(None)
     }

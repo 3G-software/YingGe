@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { MainLayout } from "./components/layout/MainLayout";
 import { TopBar } from "./components/layout/TopBar";
 import { AssetGrid } from "./components/asset/AssetGrid";
@@ -38,6 +39,16 @@ function AppContent() {
   const keywordSearch = useKeywordSearch();
   const semanticSearch = useSemanticSearch();
 
+  // Close asset detail if the asset is deleted
+  useEffect(() => {
+    if (selectedAssetId && assetsData) {
+      const assetExists = assetsData.assets.some(a => a.id === selectedAssetId);
+      if (!assetExists) {
+        setSelectedAssetId(null);
+      }
+    }
+  }, [assetsData, selectedAssetId]);
+
   // Auto-show create library modal when no libraries exist
   useEffect(() => {
     if (libraries && libraries.length === 0) {
@@ -56,6 +67,24 @@ function AppContent() {
     window.addEventListener("hashchange", handleHashChange);
     handleHashChange();
     return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  // Listen for menu import event
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      const appWindow = getCurrentWebviewWindow();
+      unlisten = await appWindow.listen("menu-import", () => {
+        setShowImport(true);
+      });
+    };
+
+    setupListener();
+
+    return () => {
+      unlisten?.();
+    };
   }, []);
 
   const handleSearch = (query: string, mode: "keyword" | "semantic") => {
@@ -140,7 +169,7 @@ function AppContent() {
 
   return (
     <MainLayout>
-      <TopBar onImportClick={() => setShowImport(true)} onSearch={handleSearch} />
+      <TopBar onSearch={handleSearch} />
       {!currentLibrary ? (
         <div className="flex-1 flex items-center justify-center text-text-secondary">
           <div className="text-center">

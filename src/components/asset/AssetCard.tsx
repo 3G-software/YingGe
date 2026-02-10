@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { Image, Music, File, Check } from "lucide-react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Asset } from "../../types/asset";
 import { useAppStore } from "../../stores/appStore";
-import { getThumbnailPath } from "../../services/tauriBridge";
+import { getThumbnailData } from "../../services/tauriBridge";
 
 interface AssetCardProps {
   asset: Asset;
@@ -17,8 +16,8 @@ export function AssetCard({ asset, onClick }: AssetCardProps) {
 
   useEffect(() => {
     if (asset.file_type === "image" && asset.thumbnail_path) {
-      getThumbnailPath(asset.id).then((path) => {
-        if (path) setThumbSrc(convertFileSrc(path));
+      getThumbnailData(asset.id).then((dataUrl) => {
+        if (dataUrl) setThumbSrc(dataUrl);
       });
     }
   }, [asset.id, asset.file_type, asset.thumbnail_path]);

@@ -1,0 +1,108 @@
+{
+  "app": {
+    "title": "YingGe",
+    "subtitle": "Game Asset Management Tool"
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "import": "Import",
+    "export": "Export",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "library": {
+    "title": "Library",
+    "create": "Create Library",
+    "name": "Name",
+    "path": "Path",
+    "selectPath": "Select Path",
+    "noLibraries": "No libraries",
+    "createFirst": "Create your first library to get started"
+  },
+  "asset": {
+    "title": "Assets",
+    "noAssets": "No assets found",
+    "importToStart": "Import files to get started",
+    "selected": "Selected",
+    "fileName": "File Name",
+    "fileType": "Type",
+    "fileSize": "Size",
+    "dimensions": "Dimensions",
+    "imported": "Imported",
+    "description": "Description",
+    "tags": "Tags",
+    "addTag": "Add Tag",
+    "aiTag": "AI Tag",
+    "aiTagging": "AI Tagging..."
+  },
+  "import": {
+    "title": "Import Assets",
+    "selectFiles": "Select Files",
+    "selectFolder": "Select Folder",
+    "dragDrop": "Or drag and drop files directly onto the main window",
+    "importing": "Importing...",
+    "supported": "Supports images, audio, and video files",
+    "targetFolder": "Target folder"
+  },
+  "delete": {
+    "title": "Confirm Delete",
+    "message": "Delete {{count}} selected asset(s)? This action cannot be undone and will permanently remove the files from disk.",
+    "button": "Delete ({{count}})",
+    "success": "Deleted successfully",
+    "error": "Delete failed"
+  },
+  "search": {
+    "placeholder": "Search assets...",
+    "keyword": "Keyword Search",
+    "semantic": "AI Semantic Search",
+    "results": "Search Results",
+    "clearSearch": "Clear search"
+  },
+  "view": {
+    "grid": "Grid View",
+    "list": "List View"
+  },
+  "sidebar": {
+    "assets": "Assets",
+    "tags": "Tags",
+    "settings": "Settings",
+    "tools": "Tools",
+    "plugins": "Plugins",
+    "toggle": "Toggle Sidebar",
+    "menu": "Menu",
+    "folders": "Folders",
+    "root": "Root"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "selectLanguage": "Select Language",
+    "theme": "Theme",
+    "ai": "AI Configuration",
+    "apiKey": "API Key",
+    "model": "Model",
+    "testConnection": "Test Connection"
+  },
+  "tags": {
+    "title": "Tag Management",
+    "create": "Create Tag",
+    "name": "Tag Name",
+    "color": "Color",
+    "category": "Category",
+    "noTags": "No tags",
+    "createFirst": "Create your first tag"
+  },
+  "tools": {
+    "title": "Tools",
+    "removeBackground": "Remove Background",
+    "spritesheet": "Merge Spritesheet",
+    "splitImage": "Split Image"
+  }
+}

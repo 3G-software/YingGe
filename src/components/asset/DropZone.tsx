@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Upload } from "lucide-react";
 import { useImportAssets } from "../../hooks/useAssets";
@@ -15,46 +15,75 @@ export function DropZone({ children }: DropZoneProps) {
   const [importing, setImporting] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleImportFiles = useCallback(async (paths: string[]) => {
-    if (!currentLibrary || paths.length === 0 || importing) return;
+  // Use ref to store the latest values without triggering effect re-runs
+  const importStateRef = useRef({ currentLibrary, currentFolder, importAssets });
+  // Use a separate ref to track if import is in progress (more reliable than state)
+  const isImportingRef = useRef(false);
 
-    setImporting(true);
-    try {
-      await importAssets.mutateAsync({
-        libraryId: currentLibrary.id,
-        filePaths: paths,
-        folderPath: currentFolder,
-      });
-    } catch (e) {
-      console.error("Import failed:", e);
-    }
-    setImporting(false);
-  }, [currentLibrary, currentFolder, importAssets, importing]);
-
+  // Update ref whenever values change
   useEffect(() => {
-    if (!currentLibrary) return;
+    importStateRef.current = { currentLibrary, currentFolder, importAssets };
+  }, [currentLibrary, currentFolder, importAssets]);
 
+  // Register drag drop listener only once on mount
+  useEffect(() => {
+    console.log("[DropZone] Registering drag drop listener (mount)");
     let unlisten: (() => void) | undefined;
+    let isMounted = true;
 
-    getCurrentWebview().onDragDropEvent((event) => {
-      if (event.payload.type === "enter" || event.payload.type === "over") {
-        setIsDragOver(true);
-      } else if (event.payload.type === "leave") {
-        setIsDragOver(false);
-      } else if (event.payload.type === "drop") {
-        setIsDragOver(false);
-        if (event.payload.paths && event.payload.paths.length > 0) {
-          handleImportFiles(event.payload.paths);
+    // Use async function to properly handle the promise
+    const setupListener = async () => {
+      unlisten = await getCurrentWebview().onDragDropEvent((event) => {
+        console.log("[DropZone] Drag drop event:", event.payload.type);
+
+        if (event.payload.type === "enter" || event.payload.type === "over") {
+          setIsDragOver(true);
+        } else if (event.payload.type === "leave") {
+          setIsDragOver(false);
+        } else if (event.payload.type === "drop") {
+          setIsDragOver(false);
+
+          const { currentLibrary, currentFolder, importAssets } = importStateRef.current;
+
+          // Check if we can import using ref (more reliable than state)
+          if (!currentLibrary || isImportingRef.current) {
+            console.log("[DropZone] Cannot import: no library or already importing");
+            return;
+          }
+
+          if (event.payload.paths && event.payload.paths.length > 0) {
+            console.log("[DropZone] Starting import with paths:", event.payload.paths);
+
+            // Set importing flag immediately in ref
+            isImportingRef.current = true;
+            setImporting(true);
+
+            importAssets.mutateAsync({
+              libraryId: currentLibrary.id,
+              filePaths: event.payload.paths,
+              folderPath: currentFolder,
+            }).then(() => {
+              console.log("[DropZone] Import completed");
+              isImportingRef.current = false;
+              setImporting(false);
+            }).catch((e) => {
+              console.error("[DropZone] Import failed:", e);
+              isImportingRef.current = false;
+              setImporting(false);
+            });
+          }
         }
-      }
-    }).then((fn) => {
-      unlisten = fn;
-    });
+      });
+    };
+
+    setupListener();
 
     return () => {
+      console.log("[DropZone] Unregistering drag drop listener (unmount)");
+      isMounted = false;
       unlisten?.();
     };
-  }, [currentLibrary, handleImportFiles]);
+  }, []); // Empty dependency array - only run once on mount
 
   // Don't show overlay if no library selected
   if (!currentLibrary) {

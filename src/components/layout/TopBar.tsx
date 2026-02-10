@@ -3,21 +3,22 @@ import {
   Search,
   LayoutGrid,
   List,
-  Upload,
   Sparkles,
   PanelLeftClose,
   PanelLeft,
   Trash2,
 } from "lucide-react";
+import { confirm } from "@tauri-apps/plugin-dialog";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
 import { useDeleteAssets } from "../../hooks/useAssets";
 
 interface TopBarProps {
-  onImportClick: () => void;
   onSearch: (query: string, mode: "keyword" | "semantic") => void;
 }
 
-export function TopBar({ onImportClick, onSearch }: TopBarProps) {
+export function TopBar({ onSearch }: TopBarProps) {
+  const { t, i18n } = useTranslation();
   const {
     viewMode,
     setViewMode,
@@ -36,9 +37,16 @@ export function TopBar({ onImportClick, onSearch }: TopBarProps) {
   const handleDelete = async () => {
     if (selectedAssetIds.length === 0) return;
 
-    const confirmed = window.confirm(
-      `Delete ${selectedAssetIds.length} selected asset(s)? This cannot be undone.`
+    const confirmed = await confirm(
+      t('delete.message', { count: selectedAssetIds.length }),
+      {
+        title: t('delete.title'),
+        kind: "warning",
+        okLabel: t('common.delete'),
+        cancelLabel: t('common.cancel'),
+      }
     );
+
     if (!confirmed) return;
 
     setDeleting(true);
@@ -80,11 +88,7 @@ export function TopBar({ onImportClick, onSearch }: TopBarProps) {
           />
           <input
             type="text"
-            placeholder={
-              searchMode === "semantic"
-                ? "Describe what you're looking for..."
-                : "Search assets..."
-            }
+            placeholder={t('search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
@@ -120,17 +124,9 @@ export function TopBar({ onImportClick, onSearch }: TopBarProps) {
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50"
           >
             <Trash2 size={14} />
-            Delete ({selectedAssetIds.length})
+            {t('delete.button', { count: selectedAssetIds.length })}
           </button>
         )}
-
-        <button
-          onClick={onImportClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors"
-        >
-          <Upload size={14} />
-          Import
-        </button>
 
         <div className="flex items-center border border-border rounded ml-2">
           <button

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Save, TestTube, Check, X } from "lucide-react";
+import { Save, TestTube, Check, X, Languages } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { AiConfigInput } from "../../types/asset";
 import {
   getAiConfig,
@@ -8,6 +9,7 @@ import {
 } from "../../services/tauriBridge";
 
 export function SettingsPage() {
+  const { t, i18n } = useTranslation();
   const [config, setConfig] = useState<AiConfigInput>({
     provider_name: "openai",
     api_endpoint: "https://api.openai.com/v1",
@@ -57,7 +59,27 @@ export function SettingsPage() {
 
   return (
     <div className="flex-1 overflow-y-auto p-6 max-w-2xl">
-      <h1 className="text-xl font-semibold mb-6">Settings</h1>
+      <h1 className="text-xl font-semibold mb-6">{t('settings.title')}</h1>
+
+      {/* Language Settings */}
+      <section className="mb-8">
+        <h2 className="text-lg font-medium mb-4">{t('settings.language')}</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-text-secondary mb-1">
+              {t('settings.selectLanguage')}
+            </label>
+            <select
+              value={i18n.language}
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
+            >
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+        </div>
+      </section>
 
       {/* AI Configuration */}
       <section className="mb-8">
