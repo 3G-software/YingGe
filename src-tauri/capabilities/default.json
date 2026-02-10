@@ -9,6 +9,7 @@
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
+    "shell:default",
     "fs:default",
     "fs:allow-read",
     "fs:allow-write",
@@ -16,6 +17,8 @@
     "fs:allow-mkdir",
     "fs:allow-rename",
     "fs:allow-remove",
-    "shell:default"
+    "fs:read-all",
+    "fs:write-all",
+    "fs:scope-home-recursive"
   ]
 }

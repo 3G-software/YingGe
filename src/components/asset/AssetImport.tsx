@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Upload, X } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Upload, X, File, FolderOpen } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useImportAssets } from "../../hooks/useAssets";
 import { useAppStore } from "../../stores/appStore";
@@ -9,43 +9,64 @@ interface AssetImportProps {
   onClose: () => void;
 }
 
+const SUPPORTED_EXTENSIONS = [
+  "png", "jpg", "jpeg", "gif", "bmp", "webp", "svg", "tiff",
+  "mp3", "wav", "ogg", "flac", "aac", "m4a",
+  "mp4", "avi", "mov", "webm",
+];
+
 export function AssetImport({ open: isOpen, onClose }: AssetImportProps) {
   const currentLibrary = useAppStore((s) => s.currentLibrary);
   const currentFolder = useAppStore((s) => s.currentFolder);
   const importAssets = useImportAssets();
   const [importing, setImporting] = useState(false);
 
+  const handleImportFiles = useCallback(async (paths: string[]) => {
+    if (!currentLibrary || paths.length === 0) return;
+
+    setImporting(true);
+    try {
+      await importAssets.mutateAsync({
+        libraryId: currentLibrary.id,
+        filePaths: paths,
+        folderPath: currentFolder,
+      });
+      onClose();
+    } catch (e) {
+      console.error("Import failed:", e);
+    }
+    setImporting(false);
+  }, [currentLibrary, currentFolder, importAssets, onClose]);
+
   if (!isOpen) return null;
 
   const handleSelectFiles = async () => {
     const selected = await open({
       multiple: true,
+      directory: false,
       filters: [
         {
           name: "Assets",
-          extensions: [
-            "png", "jpg", "jpeg", "gif", "bmp", "webp", "svg", "tiff",
-            "mp3", "wav", "ogg", "flac", "aac", "m4a",
-            "mp4", "avi", "mov", "webm",
-          ],
+          extensions: SUPPORTED_EXTENSIONS,
         },
       ],
     });
 
-    if (selected && currentLibrary) {
+    if (selected) {
       const paths = Array.isArray(selected) ? selected : [selected];
-      setImporting(true);
-      try {
-        await importAssets.mutateAsync({
-          libraryId: currentLibrary.id,
-          filePaths: paths,
-          folderPath: currentFolder,
-        });
-        onClose();
-      } catch (e) {
-        console.error("Import failed:", e);
-      }
-      setImporting(false);
+      handleImportFiles(paths);
+    }
+  };
+
+  const handleSelectFolder = async () => {
+    const selected = await open({
+      multiple: false,
+      directory: true,
+    });
+
+    if (selected) {
+      const paths = Array.isArray(selected) ? selected : [selected];
+      handleImportFiles(paths);
     }
   };
 
@@ -70,25 +91,47 @@ export function AssetImport({ open: isOpen, onClose }: AssetImportProps) {
               Please select a library first
             </p>
           ) : (
-            <div
-              onClick={handleSelectFiles}
-              className="border-2 border-dashed border-border rounded-lg p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <Upload
-                size={40}
-                className="mx-auto mb-3 text-text-secondary"
-              />
-              <p className="text-sm text-text-primary mb-1">
-                Click to select files
-              </p>
-              <p className="text-xs text-text-secondary">
-                Supports images (PNG, JPG, GIF, WebP, SVG) and audio (MP3, WAV,
-                OGG, FLAC)
-              </p>
-              {importing && (
-                <p className="text-sm text-primary mt-3">Importing...</p>
-              )}
-            </div>
+            <>
+              {/* Info */}
+              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center mb-4">
+                <Upload size={40} className="mx-auto mb-3 text-text-secondary" />
+                <p className="text-sm text-text-primary mb-1">
+                  Select files or folder to import
+                </p>
+                <p className="text-xs text-text-secondary">
+                  Supports images, audio, and video files
+                </p>
+                <p className="text-xs text-text-secondary mt-2">
+                  Or drag and drop files directly onto the main window
+                </p>
+                {importing && (
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-primary">Importing...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSelectFiles}
+                  disabled={importing}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
+                >
+                  <File size={16} />
+                  Select Files
+                </button>
+                <button
+                  onClick={handleSelectFolder}
+                  disabled={importing}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-bg-tertiary text-text-primary rounded-lg hover:bg-border transition-colors disabled:opacity-50"
+                >
+                  <FolderOpen size={16} />
+                  Select Folder
+                </button>
+              </div>
+            </>
           )}
         </div>
 
@@ -97,7 +140,7 @@ export function AssetImport({ open: isOpen, onClose }: AssetImportProps) {
           <span>
             Library: {currentLibrary?.name || "None"}
           </span>
-          <span>Folder: {currentFolder}</span>
+          <span>Target folder: {currentFolder}</span>
         </div>
       </div>
     </div>

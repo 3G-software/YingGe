@@ -5,10 +5,13 @@ import { TopBar } from "./components/layout/TopBar";
 import { AssetGrid } from "./components/asset/AssetGrid";
 import { AssetDetail } from "./components/asset/AssetDetail";
 import { AssetImport } from "./components/asset/AssetImport";
+import { DropZone } from "./components/asset/DropZone";
 import { TagManager } from "./components/tag/TagManager";
 import { SettingsPage } from "./components/settings/SettingsPage";
 import { ToolsPage } from "./components/processing/ToolsPage";
+import { CreateLibraryModal } from "./components/library/CreateLibraryModal";
 import { useAssets } from "./hooks/useAssets";
+import { useLibraries } from "./hooks/useLibrary";
 import { useAppStore } from "./stores/appStore";
 import { useKeywordSearch, useSemanticSearch } from "./hooks/useSearch";
 import type { Asset } from "./types/asset";
@@ -23,15 +26,28 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const currentLibrary = useAppStore((s) => s.currentLibrary);
+  const { currentLibrary, setCurrentLibrary } = useAppStore();
   const [route, setRoute] = useState("/");
   const [showImport, setShowImport] = useState(false);
+  const [showCreateLibrary, setShowCreateLibrary] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Asset[] | null>(null);
 
+  const { data: libraries } = useLibraries();
   const { data: assetsData } = useAssets();
   const keywordSearch = useKeywordSearch();
   const semanticSearch = useSemanticSearch();
+
+  // Auto-show create library modal when no libraries exist
+  useEffect(() => {
+    if (libraries && libraries.length === 0) {
+      setShowCreateLibrary(true);
+    }
+    // Auto-select first library if none selected
+    if (libraries && libraries.length > 0 && !currentLibrary) {
+      setCurrentLibrary(libraries[0]);
+    }
+  }, [libraries, currentLibrary, setCurrentLibrary]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -93,7 +109,7 @@ function AppContent() {
 
     return (
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <DropZone>
           <AssetGrid assets={displayAssets} onAssetClick={handleAssetClick} />
           {assetsData && !searchResults && (
             <div className="px-4 py-2 border-t border-border text-xs text-text-secondary">
@@ -111,7 +127,7 @@ function AppContent() {
               </button>
             </div>
           )}
-        </div>
+        </DropZone>
         {selectedAssetId && (
           <AssetDetail
             assetId={selectedAssetId}
@@ -132,14 +148,24 @@ function AppContent() {
               Welcome to YingGe
             </h2>
             <p className="text-sm mb-4">
-              Create or select a library from the sidebar to get started
+              Create or select a library to get started
             </p>
+            <button
+              onClick={() => setShowCreateLibrary(true)}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+            >
+              Create Library
+            </button>
           </div>
         </div>
       ) : (
         renderPage()
       )}
       <AssetImport open={showImport} onClose={() => setShowImport(false)} />
+      <CreateLibraryModal
+        open={showCreateLibrary}
+        onClose={() => setShowCreateLibrary(false)}
+      />
     </MainLayout>
   );
 }

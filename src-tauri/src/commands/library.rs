@@ -4,19 +4,36 @@ use tauri::State;
 use crate::db::{models::Library, queries};
 use crate::error::AppError;
 
+/// Expand ~ to home directory
+fn expand_path(path: &str) -> String {
+    if path.starts_with("~/") {
+        if let Some(home) = dirs::home_dir() {
+            return home.join(&path[2..]).to_string_lossy().to_string();
+        }
+    } else if path == "~" {
+        if let Some(home) = dirs::home_dir() {
+            return home.to_string_lossy().to_string();
+        }
+    }
+    path.to_string()
+}
+
 #[tauri::command]
 pub async fn create_library(
     name: String,
     root_path: String,
     pool: State<'_, SqlitePool>,
 ) -> Result<Library, AppError> {
+    // Expand ~ to home directory
+    let expanded_path = expand_path(&root_path);
+
     // Create the library directory
-    let lib_path = std::path::Path::new(&root_path);
+    let lib_path = std::path::Path::new(&expanded_path);
     std::fs::create_dir_all(lib_path)?;
     std::fs::create_dir_all(lib_path.join("assets"))?;
     std::fs::create_dir_all(lib_path.join(".thumbnails"))?;
 
-    let library = queries::create_library(&pool, &name, &root_path).await?;
+    let library = queries::create_library(&pool, &name, &expanded_path).await?;
     Ok(library)
 }
 

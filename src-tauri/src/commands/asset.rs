@@ -9,6 +9,41 @@ use crate::db::{
 use crate::error::AppError;
 use crate::storage::{file_ops, thumbnail};
 
+/// Supported file extensions for import
+const SUPPORTED_EXTENSIONS: &[&str] = &[
+    "png", "jpg", "jpeg", "gif", "bmp", "webp", "svg", "tiff",
+    "mp3", "wav", "ogg", "flac", "aac", "m4a",
+    "mp4", "avi", "mov", "webm",
+];
+
+/// Check if a file has a supported extension
+fn is_supported_file(path: &std::path::Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| SUPPORTED_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
+        .unwrap_or(false)
+}
+
+/// Collect all files from a path (recursively if directory)
+fn collect_files(path: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut files = Vec::new();
+
+    if path.is_file() {
+        if is_supported_file(path) {
+            files.push(path.to_path_buf());
+        }
+    } else if path.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(path) {
+            for entry in entries.flatten() {
+                let entry_path = entry.path();
+                files.extend(collect_files(&entry_path));
+            }
+        }
+    }
+
+    files
+}
+
 #[tauri::command]
 pub async fn import_assets(
     library_id: String,
@@ -20,10 +55,16 @@ pub async fn import_assets(
     let library = queries::get_library(&pool, &library_id).await?;
     let library_root = std::path::PathBuf::from(&library.root_path);
 
+    // Collect all files (including from directories)
+    let mut all_files = Vec::new();
+    for file_path_str in &file_paths {
+        let path = std::path::Path::new(file_path_str);
+        all_files.extend(collect_files(path));
+    }
+
     let mut imported = Vec::new();
 
-    for file_path_str in &file_paths {
-        let source = std::path::Path::new(file_path_str);
+    for source in &all_files {
         if !source.exists() {
             continue;
         }

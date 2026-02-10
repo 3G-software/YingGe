@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Search,
   LayoutGrid,
@@ -6,8 +7,10 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeft,
+  Trash2,
 } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
+import { useDeleteAssets } from "../../hooks/useAssets";
 
 interface TopBarProps {
   onImportClick: () => void;
@@ -24,7 +27,29 @@ export function TopBar({ onImportClick, onSearch }: TopBarProps) {
     setSearchQuery,
     searchMode,
     setSearchMode,
+    selectedAssetIds,
+    clearSelection,
   } = useAppStore();
+  const deleteAssets = useDeleteAssets();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (selectedAssetIds.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Delete ${selectedAssetIds.length} selected asset(s)? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await deleteAssets.mutateAsync(selectedAssetIds);
+      clearSelection();
+    } catch (e) {
+      console.error("Delete failed:", e);
+    }
+    setDeleting(false);
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +112,18 @@ export function TopBar({ onImportClick, onSearch }: TopBarProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-1">
+        {/* Delete button - shown when assets selected */}
+        {selectedAssetIds.length > 0 && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+          >
+            <Trash2 size={14} />
+            Delete ({selectedAssetIds.length})
+          </button>
+        )}
+
         <button
           onClick={onImportClick}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors"
