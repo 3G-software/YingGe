@@ -148,6 +148,8 @@ pub fn run() {
             commands::asset::get_asset_file_path,
             commands::asset::get_thumbnail_path,
             commands::asset::get_thumbnail_data,
+            commands::asset::create_folder,
+            commands::asset::rename_folder,
             // Tag commands
             commands::tag::create_tag,
             commands::tag::list_tags,

@@ -252,8 +252,66 @@ pub async fn get_folders(
     library_id: String,
     pool: State<'_, SqlitePool>,
 ) -> Result<Vec<FolderInfo>, AppError> {
-    let folders = queries::get_folders(&pool, &library_id).await?;
-    Ok(folders)
+    let library = queries::get_library(&pool, &library_id).await?;
+    let library_root = std::path::PathBuf::from(&library.root_path);
+
+    // Get folders from database (folders with assets)
+    let mut db_folders = queries::get_folders(&pool, &library_id).await?;
+
+    // Recursively scan filesystem for all folders
+    fn scan_folders(
+        base_path: &std::path::Path,
+        current_path: &std::path::Path,
+        folders: &mut Vec<FolderInfo>,
+    ) {
+        if let Ok(entries) = std::fs::read_dir(current_path) {
+            for entry in entries.flatten() {
+                if let Ok(metadata) = entry.metadata() {
+                    if metadata.is_dir() {
+                        if let Some(name) = entry.file_name().to_str() {
+                            // Skip hidden folders (starting with .)
+                            if name.starts_with('.') {
+                                continue;
+                            }
+
+                            let full_path = entry.path();
+                            // Get relative path from library root
+                            let relative_path = full_path
+                                .strip_prefix(base_path)
+                                .ok()
+                                .and_then(|p| p.to_str())
+                                .unwrap_or(name)
+                                .to_string();
+
+                            folders.push(FolderInfo {
+                                path: relative_path.clone(),
+                                name: name.to_string(),
+                                asset_count: 0,
+                            });
+
+                            // Recursively scan subdirectories
+                            scan_folders(base_path, &full_path, folders);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut fs_folders = Vec::new();
+    scan_folders(&library_root, &library_root, &mut fs_folders);
+
+    // Merge with db_folders, avoiding duplicates
+    for fs_folder in fs_folders {
+        if !db_folders.iter().any(|f| f.path == fs_folder.path) {
+            db_folders.push(fs_folder);
+        }
+    }
+
+    // Sort by path
+    db_folders.sort_by(|a, b| a.path.cmp(&b.path));
+
+    Ok(db_folders)
 }
 
 /// Get the absolute filesystem path for an asset file (for frontend to display)
@@ -314,4 +372,78 @@ pub async fn get_thumbnail_data(
     } else {
         Ok(None)
     }
+}
+
+/// Create a new folder
+#[tauri::command]
+pub async fn create_folder(
+    library_id: String,
+    folder_name: String,
+    parent_path: String,
+    pool: State<'_, SqlitePool>,
+) -> Result<(), AppError> {
+    // Validate folder name
+    if folder_name.is_empty() || folder_name.contains('/') || folder_name.contains('\\') {
+        return Err(AppError::InvalidInput("Invalid folder name".to_string()));
+    }
+
+    // Get library to access root path
+    let library = queries::get_library(&pool, &library_id).await?;
+    let library_root = std::path::Path::new(&library.root_path);
+
+    // Build the full folder path
+    let folder_path = if parent_path == "/" {
+        library_root.join(&folder_name)
+    } else {
+        library_root.join(&parent_path).join(&folder_name)
+    };
+
+    // Check if folder already exists
+    if folder_path.exists() {
+        return Err(AppError::InvalidInput("Folder already exists".to_string()));
+    }
+
+    // Create the folder
+    std::fs::create_dir_all(&folder_path)?;
+
+    Ok(())
+}
+
+/// Rename a folder
+#[tauri::command]
+pub async fn rename_folder(
+    library_id: String,
+    old_path: String,
+    new_name: String,
+    pool: State<'_, SqlitePool>,
+) -> Result<(), AppError> {
+    // Validate new name
+    if new_name.is_empty() || new_name.contains('/') || new_name.contains('\\') {
+        return Err(AppError::InvalidInput("Invalid folder name".to_string()));
+    }
+
+    // Get library to access root path
+    let library = queries::get_library(&pool, &library_id).await?;
+    let library_root = std::path::Path::new(&library.root_path);
+
+    let old_folder_path = library_root.join(&old_path);
+    let new_folder_path = library_root.join(&new_name);
+
+    // Check if old folder exists
+    if !old_folder_path.exists() {
+        return Err(AppError::InvalidInput("Folder does not exist".to_string()));
+    }
+
+    // Check if new folder already exists
+    if new_folder_path.exists() {
+        return Err(AppError::InvalidInput("A folder with this name already exists".to_string()));
+    }
+
+    // Rename the folder
+    std::fs::rename(&old_folder_path, &new_folder_path)?;
+
+    // Update all assets in the database that reference this folder
+    queries::update_folder_path(&pool, &library_id, &old_path, &new_name).await?;
+
+    Ok(())
 }

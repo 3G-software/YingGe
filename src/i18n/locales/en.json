@@ -80,6 +80,13 @@
     "folders": "Folders",
     "root": "Root"
   },
+  "folder": {
+    "create": "Create Folder",
+    "name": "Folder Name",
+    "rename": "Rename",
+    "delete": "Delete Folder",
+    "import": "Import"
+  },
   "settings": {
     "title": "Settings",
     "language": "Language",

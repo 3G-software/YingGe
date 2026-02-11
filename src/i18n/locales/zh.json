@@ -80,6 +80,13 @@
     "folders": "文件夹",
     "root": "根目录"
   },
+  "folder": {
+    "create": "创建文件夹",
+    "name": "文件夹名称",
+    "rename": "重命名",
+    "delete": "删除文件夹",
+    "import": "导入"
+  },
   "settings": {
     "title": "设置",
     "language": "语言",

@@ -201,7 +201,7 @@ pub async fn get_folders(
     library_id: &str,
 ) -> Result<Vec<FolderInfo>, sqlx::Error> {
     let rows = sqlx::query_as::<_, (String, i64)>(
-        "SELECT folder_path, COUNT(*) as asset_count FROM assets WHERE library_id = ? GROUP BY folder_path ORDER BY folder_path",
+        "SELECT folder_path, COUNT(*) as asset_count FROM assets WHERE library_id = ? AND folder_path != '/' GROUP BY folder_path ORDER BY folder_path",
     )
     .bind(library_id)
     .fetch_all(pool)
@@ -610,4 +610,22 @@ pub async fn get_all_embeddings(
     .bind(model)
     .fetch_all(pool)
     .await
+}
+
+/// Update folder path for all assets when a folder is renamed
+pub async fn update_folder_path(
+    pool: &SqlitePool,
+    library_id: &str,
+    old_path: &str,
+    new_path: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE assets SET folder_path = ? WHERE library_id = ? AND folder_path = ?",
+    )
+    .bind(new_path)
+    .bind(library_id)
+    .bind(old_path)
+    .execute(pool)
+    .await?;
+    Ok(())
 }

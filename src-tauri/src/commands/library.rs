@@ -27,13 +27,14 @@ pub async fn create_library(
     // Expand ~ to home directory
     let expanded_path = expand_path(&root_path);
 
-    // Create the library directory
-    let lib_path = std::path::Path::new(&expanded_path);
-    std::fs::create_dir_all(lib_path)?;
-    std::fs::create_dir_all(lib_path.join("assets"))?;
+    // Create the library directory with the library name
+    let base_path = std::path::Path::new(&expanded_path);
+    let lib_path = base_path.join(&name);
+
+    std::fs::create_dir_all(&lib_path)?;
     std::fs::create_dir_all(lib_path.join(".thumbnails"))?;
 
-    let library = queries::create_library(&pool, &name, &expanded_path).await?;
+    let library = queries::create_library(&pool, &name, &lib_path.to_string_lossy().to_string()).await?;
     Ok(library)
 }
 

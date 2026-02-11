@@ -64,6 +64,12 @@ export const moveAssets = (ids: string[], targetFolder: string) =>
 export const getFolders = (libraryId: string) =>
   invoke<FolderInfo[]>("get_folders", { libraryId });
 
+export const createFolder = (libraryId: string, folderName: string, parentPath: string) =>
+  invoke<void>("create_folder", { libraryId, folderName, parentPath });
+
+export const renameFolder = (libraryId: string, oldPath: string, newName: string) =>
+  invoke<void>("rename_folder", { libraryId, oldPath, newName });
+
 export const getAssetFilePath = (id: string) =>
   invoke<string>("get_asset_file_path", { id });
 

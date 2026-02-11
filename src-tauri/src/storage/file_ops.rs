@@ -76,9 +76,9 @@ pub fn copy_to_library(
 
     let relative_dir = folder_path.trim_start_matches('/');
     let target_dir = if relative_dir.is_empty() {
-        library_root.join("assets")
+        library_root.to_path_buf()
     } else {
-        library_root.join("assets").join(relative_dir)
+        library_root.join(relative_dir)
     };
 
     std::fs::create_dir_all(&target_dir)?;
