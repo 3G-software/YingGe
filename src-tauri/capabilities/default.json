@@ -19,6 +19,9 @@
     "fs:allow-remove",
     "fs:read-all",
     "fs:write-all",
-    "fs:scope-home-recursive"
+    "fs:scope-home-recursive",
+    "clipboard-manager:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text"
   ]
 }

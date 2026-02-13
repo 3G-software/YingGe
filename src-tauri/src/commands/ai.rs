@@ -38,9 +38,13 @@ pub async fn ai_tag_asset(
     pool: State<'_, SqlitePool>,
     ai_manager: State<'_, AiProviderManager>,
 ) -> Result<AiTagResult, AppError> {
+    tracing::info!("=== AI Tagging Started for asset: {} ===", asset_id);
+
     let asset = queries::get_asset(&pool, &asset_id).await?;
+    tracing::info!("Asset info: file_name={}, file_type={}", asset.file_name, asset.file_type);
 
     if asset.file_type != "image" {
+        tracing::warn!("AI tagging skipped: asset is not an image");
         return Err(AppError::InvalidInput(
             "AI tagging is currently only supported for images".to_string(),
         ));
@@ -48,27 +52,44 @@ pub async fn ai_tag_asset(
 
     let library = queries::get_library(&pool, &asset.library_id).await?;
     let file_path = std::path::Path::new(&library.root_path).join(&asset.relative_path);
+    tracing::info!("Image file path: {:?}", file_path);
 
+    tracing::info!("Calling AI vision model to analyze image...");
     let analysis = analyze_image_file(&file_path, &ai_manager).await?;
+    tracing::info!("AI analysis completed:");
+    tracing::info!("  Description: {}", analysis.description);
+    tracing::info!("  Suggested tags: {:?}", analysis.tags.iter().map(|t| &t.name).collect::<Vec<_>>());
+    if let Some(ref name) = analysis.suggested_name {
+        tracing::info!("  Suggested name: {}", name);
+    }
 
     // Update asset description
+    tracing::info!("Updating asset description...");
     queries::update_asset_description(&pool, &asset_id, &analysis.description).await?;
 
     // Create/assign tags
     let mut assigned_tags = Vec::new();
+    tracing::info!("Creating and assigning {} tags...", analysis.tags.len());
     for suggested in &analysis.tags {
         let tag = queries::get_or_create_tag(&pool, &asset.library_id, &suggested.name, true)
             .await?;
+        tracing::info!("  Tag created/found: {} (id: {})", tag.name, tag.id);
         queries::assign_tags(&pool, &asset_id, &[tag.id.clone()]).await?;
         assigned_tags.push(tag);
     }
 
     // Generate and store embedding for semantic search
+    tracing::info!("Generating embedding for semantic search...");
     if let Ok(embedding_bytes) =
         embed_text_to_bytes(&analysis.description, &ai_manager).await
     {
         queries::save_embedding(&pool, &asset_id, "default", &embedding_bytes).await?;
+        tracing::info!("Embedding saved successfully");
+    } else {
+        tracing::warn!("Failed to generate embedding");
     }
+
+    tracing::info!("=== AI Tagging Completed for asset: {} ===", asset_id);
 
     Ok(AiTagResult {
         tags: assigned_tags,

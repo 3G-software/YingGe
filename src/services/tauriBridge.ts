@@ -159,3 +159,8 @@ export const mergeSpritesheet = (params: {
 
 export const splitImage = (assetId: string, rows: number, cols: number) =>
   invoke<Asset[]>("split_image", { assetId, rows, cols });
+
+// --- Menu ---
+
+export const updateMenuLanguage = (language: string) =>
+  invoke<void>("update_menu_language", { language });

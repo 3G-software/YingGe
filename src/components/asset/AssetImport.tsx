@@ -3,6 +3,7 @@ import { Upload, X, File, FolderOpen } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useImportAssets } from "../../hooks/useAssets";
 import { useAppStore } from "../../stores/appStore";
+import { aiTagAsset } from "../../services/tauriBridge";
 
 interface AssetImportProps {
   open: boolean;
@@ -26,11 +27,31 @@ export function AssetImport({ open: isOpen, onClose }: AssetImportProps) {
 
     setImporting(true);
     try {
-      await importAssets.mutateAsync({
+      const importedAssets = await importAssets.mutateAsync({
         libraryId: currentLibrary.id,
         filePaths: paths,
         folderPath: currentFolder,
       });
+
+      console.log(`[AssetImport] Import completed, ${importedAssets.length} assets imported`);
+
+      // Auto-tag images with AI
+      const imageAssets = importedAssets.filter(asset => asset.file_type === 'image');
+      if (imageAssets.length > 0) {
+        console.log(`[AssetImport] Auto-tagging ${imageAssets.length} images with AI`);
+
+        // Tag each image asynchronously (don't wait for completion)
+        imageAssets.forEach(async (asset) => {
+          try {
+            console.log(`[AssetImport] Starting AI tagging for asset: ${asset.id}`);
+            await aiTagAsset(asset.id);
+            console.log(`[AssetImport] AI tagging completed for asset: ${asset.id}`);
+          } catch (error) {
+            console.error(`[AssetImport] AI tagging failed for asset ${asset.id}:`, error);
+          }
+        });
+      }
+
       onClose();
     } catch (e) {
       console.error("Import failed:", e);

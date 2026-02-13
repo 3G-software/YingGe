@@ -115,7 +115,7 @@ export function AssetGrid({ assets, onAssetClick }: AssetGridProps) {
 
   if (viewMode === "list") {
     return (
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-text-secondary border-b border-border">
@@ -161,7 +161,7 @@ export function AssetGrid({ assets, onAssetClick }: AssetGridProps) {
   return (
     <div
       ref={gridRef}
-      className="flex-1 overflow-y-auto p-4 relative select-none"
+      className="flex-1 overflow-y-auto relative select-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
     >

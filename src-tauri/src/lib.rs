@@ -18,6 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             // Create App menu (YingGe)
             let settings_item = MenuItemBuilder::with_id("settings", "设置").build(app)?;
@@ -171,6 +172,8 @@ pub fn run() {
             commands::processing::remove_background,
             commands::processing::merge_spritesheet,
             commands::processing::split_image,
+            // Menu commands
+            commands::menu::update_menu_language,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

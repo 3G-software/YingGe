@@ -35,7 +35,7 @@ export function TagManager() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 max-w-2xl">
+    <div className="flex-1 overflow-y-auto max-w-2xl">
       <h1 className="text-xl font-semibold mb-6">Tag Manager</h1>
 
       {/* Create new tag */}

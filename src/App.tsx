@@ -123,11 +123,23 @@ function AppContent() {
   const renderPage = () => {
     switch (route) {
       case "/tags":
-        return <TagManager />;
+        return (
+          <div className="flex flex-1 overflow-hidden p-6">
+            <TagManager />
+          </div>
+        );
       case "/settings":
-        return <SettingsPage />;
+        return (
+          <div className="flex flex-1 overflow-hidden p-6">
+            <SettingsPage />
+          </div>
+        );
       case "/tools":
-        return <ToolsPage />;
+        return (
+          <div className="flex flex-1 overflow-hidden p-6">
+            <ToolsPage />
+          </div>
+        );
       default:
         return renderAssetBrowser();
     }
@@ -137,7 +149,7 @@ function AppContent() {
     const displayAssets = searchResults || assetsData?.assets || [];
 
     return (
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden p-6">
         <DropZone>
           <AssetGrid assets={displayAssets} onAssetClick={handleAssetClick} />
           {assetsData && !searchResults && (

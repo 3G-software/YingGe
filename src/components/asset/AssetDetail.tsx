@@ -78,7 +78,7 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
       <div className="flex-1 overflow-y-auto">
         {/* Preview */}
         {fileSrc && (
-          <div className="p-3 border-b border-border">
+          <div className="pt-4 px-3 pb-3 border-b border-border">
             <img
               src={fileSrc}
               alt={asset.file_name}

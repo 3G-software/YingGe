@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Save, TestTube, Check, X, Languages } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import type { AiConfigInput } from "../../types/asset";
 import {
   getAiConfig,
   saveAiConfig,
   testAiConnection,
+  updateMenuLanguage,
 } from "../../services/tauriBridge";
 
 export function SettingsPage() {
@@ -57,8 +59,59 @@ export function SettingsPage() {
     setTesting(false);
   };
 
+  const handleLanguageChange = async (newLanguage: string) => {
+    await i18n.changeLanguage(newLanguage);
+    try {
+      await updateMenuLanguage(newLanguage);
+    } catch (e) {
+      console.error("Failed to update menu language:", e);
+    }
+  };
+
+  const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>, field: keyof AiConfigInput) => {
+    // Handle Cmd+A / Ctrl+A (Select All)
+    if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Explicitly select all text
+      const input = e.currentTarget;
+      input.select();
+      console.log('已执行全选操作');
+      return;
+    }
+
+    // Handle Cmd+V / Ctrl+V (Paste)
+    if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+      e.stopPropagation();
+      e.preventDefault();
+      try {
+        const text = await readText();
+        if (text) {
+          setConfig({ ...config, [field]: text });
+          console.log(`已粘贴到 ${field}:`, text.substring(0, 20));
+        }
+      } catch (err) {
+        console.error('粘贴失败:', err);
+        // 如果 Tauri API 失败，让浏览器处理
+        e.currentTarget.focus();
+      }
+    }
+
+    // Handle Cmd+C / Ctrl+C (Copy) - allow default
+    if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+      e.stopPropagation();
+      return;
+    }
+
+    // Handle Cmd+X / Ctrl+X (Cut) - allow default
+    if ((e.metaKey || e.ctrlKey) && e.key === 'x') {
+      e.stopPropagation();
+      return;
+    }
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto p-6 max-w-2xl">
+    <div className="flex-1 overflow-y-auto max-w-2xl">
       <h1 className="text-xl font-semibold mb-6">{t('settings.title')}</h1>
 
       {/* Language Settings */}
@@ -71,7 +124,7 @@ export function SettingsPage() {
             </label>
             <select
               value={i18n.language}
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              onChange={(e) => handleLanguageChange(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             >
               <option value="zh">中文</option>
@@ -111,9 +164,13 @@ export function SettingsPage() {
               onChange={(e) =>
                 setConfig({ ...config, api_endpoint: e.target.value })
               }
-              placeholder="https://api.openai.com/v1"
+              onKeyDown={(e) => handleInputKeyDown(e, 'api_endpoint')}
+              placeholder="https://api.openai.com/v1/chat/completions"
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             />
+            <p className="text-xs text-text-secondary mt-1">
+              Enter the complete URL including the path (e.g., /v1/chat/completions or /openai/chat/completions)
+            </p>
           </div>
 
           <div>
@@ -126,6 +183,8 @@ export function SettingsPage() {
               onChange={(e) =>
                 setConfig({ ...config, api_key: e.target.value })
               }
+              onKeyDown={(e) => handleInputKeyDown(e, 'api_key')}
+              autoComplete="off"
               placeholder="sk-..."
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             />
@@ -141,6 +200,7 @@ export function SettingsPage() {
               onChange={(e) =>
                 setConfig({ ...config, model_id: e.target.value })
               }
+              onKeyDown={(e) => handleInputKeyDown(e, 'model_id')}
               placeholder="gpt-4o"
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             />
@@ -156,6 +216,7 @@ export function SettingsPage() {
               onChange={(e) =>
                 setConfig({ ...config, embedding_model: e.target.value })
               }
+              onKeyDown={(e) => handleInputKeyDown(e, 'embedding_model')}
               placeholder="text-embedding-3-small"
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             />

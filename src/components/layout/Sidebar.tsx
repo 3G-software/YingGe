@@ -7,7 +7,7 @@ import { useFolders, useImportAssets } from "../../hooks/useAssets";
 import { useLibraries, useCreateLibrary } from "../../hooks/useLibrary";
 import type { Library as LibraryType } from "../../types/asset";
 import { ContextMenu, type ContextMenuItem } from "../common/ContextMenu";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import * as api from "../../services/tauriBridge";
 
 export function Sidebar() {
@@ -24,6 +24,21 @@ export function Sidebar() {
   const { data: folders } = useFolders();
   const createLibrary = useCreateLibrary();
   const importAssets = useImportAssets();
+
+  // Query to get total asset count for the entire library (root + all subdirectories)
+  const { data: rootAssetsData } = useQuery({
+    queryKey: ["root-assets-count", currentLibrary?.id],
+    queryFn: () =>
+      api.getAssets({
+        libraryId: currentLibrary!.id,
+        // Don't specify folderPath to get all assets in the library
+        page: 1,
+        pageSize: 1,
+        sortBy: "date",
+        sortOrder: "desc",
+      }),
+    enabled: !!currentLibrary,
+  });
 
   const [showNewLibrary, setShowNewLibrary] = useState(false);
   const [newLibName, setNewLibName] = useState("");
@@ -306,24 +321,35 @@ export function Sidebar() {
           </div>
 
           <button
-            onClick={() => setCurrentFolder("/")}
-            className={`w-full flex items-center gap-1 px-2 py-1.5 text-sm rounded transition-colors ${
+            onClick={() => {
+              setCurrentFolder("/");
+              // Navigate to main view if currently on settings or other pages
+              if (window.location.hash !== '#/' && window.location.hash !== '') {
+                window.location.hash = '#/';
+              }
+            }}
+            className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm rounded transition-colors ${
               currentFolder === "/"
                 ? "bg-primary/20 text-primary"
                 : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
             }`}
           >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setRootExpanded(!rootExpanded);
-              }}
-              className="p-0 hover:bg-transparent"
-            >
-              {rootExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            <FolderOpen size={14} />
-            /
+            <span className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRootExpanded(!rootExpanded);
+                }}
+                className="p-0 hover:bg-transparent"
+              >
+                {rootExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
+              <FolderOpen size={14} />
+              /
+            </span>
+            <span className="text-xs opacity-60">
+              {rootAssetsData?.total || 0}
+            </span>
           </button>
 
           {/* New Folder Dialog under root */}
@@ -378,7 +404,13 @@ export function Sidebar() {
                     />
                   ) : (
                     <button
-                      onClick={() => setCurrentFolder(folder.path)}
+                      onClick={() => {
+                        setCurrentFolder(folder.path);
+                        // Navigate to main view if currently on settings or other pages
+                        if (window.location.hash !== '#/' && window.location.hash !== '') {
+                          window.location.hash = '#/';
+                        }
+                      }}
                       onContextMenu={(e) => {
                         e.stopPropagation();
                         handleContextMenu(e, folder.path);

@@ -3,10 +3,18 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Upload } from "lucide-react";
 import { useImportAssets } from "../../hooks/useAssets";
 import { useAppStore } from "../../stores/appStore";
+import { aiTagAsset } from "../../services/tauriBridge";
 
 interface DropZoneProps {
   children: React.ReactNode;
 }
+
+// Global flag to prevent multiple simultaneous imports across all instances
+let globalImportInProgress = false;
+
+// Global flag to ensure only one listener is registered
+let globalListenerRegistered = false;
+let globalUnlisten: (() => void) | undefined;
 
 export function DropZone({ children }: DropZoneProps) {
   const currentLibrary = useAppStore((s) => s.currentLibrary);
@@ -17,8 +25,6 @@ export function DropZone({ children }: DropZoneProps) {
 
   // Use ref to store the latest values without triggering effect re-runs
   const importStateRef = useRef({ currentLibrary, currentFolder, importAssets });
-  // Use a separate ref to track if import is in progress (more reliable than state)
-  const isImportingRef = useRef(false);
 
   // Update ref whenever values change
   useEffect(() => {
@@ -27,14 +33,22 @@ export function DropZone({ children }: DropZoneProps) {
 
   // Register drag drop listener only once on mount
   useEffect(() => {
-    console.log("[DropZone] Registering drag drop listener (mount)");
-    let unlisten: (() => void) | undefined;
-    let isMounted = true;
+    const componentId = Math.random().toString(36).substring(7);
+    console.log(`[DropZone ${componentId}] Component mounted`);
+
+    // Check if listener is already registered globally
+    if (globalListenerRegistered) {
+      console.log(`[DropZone ${componentId}] Listener already registered globally, skipping`);
+      return;
+    }
+
+    console.log(`[DropZone ${componentId}] Registering drag drop listener`);
+    globalListenerRegistered = true;
 
     // Use async function to properly handle the promise
     const setupListener = async () => {
-      unlisten = await getCurrentWebview().onDragDropEvent((event) => {
-        console.log("[DropZone] Drag drop event:", event.payload.type);
+      globalUnlisten = await getCurrentWebview().onDragDropEvent((event) => {
+        console.log(`[DropZone] Drag drop event:`, event.payload.type);
 
         if (event.payload.type === "enter" || event.payload.type === "over") {
           setIsDragOver(true);
@@ -43,34 +57,63 @@ export function DropZone({ children }: DropZoneProps) {
         } else if (event.payload.type === "drop") {
           setIsDragOver(false);
 
+          // Atomic check-and-set: if already importing, bail out immediately
+          if (globalImportInProgress) {
+            console.log(`[DropZone] Import already in progress, ignoring drop event`);
+            return;
+          }
+
+          // Set flag immediately before any other checks
+          globalImportInProgress = true;
+
           const { currentLibrary, currentFolder, importAssets } = importStateRef.current;
 
-          // Check if we can import using ref (more reliable than state)
-          if (!currentLibrary || isImportingRef.current) {
-            console.log("[DropZone] Cannot import: no library or already importing");
+          // Check if we can import
+          if (!currentLibrary) {
+            console.log(`[DropZone] Cannot import: no library selected`);
+            globalImportInProgress = false; // Reset flag
             return;
           }
 
           if (event.payload.paths && event.payload.paths.length > 0) {
-            console.log("[DropZone] Starting import with paths:", event.payload.paths);
-
-            // Set importing flag immediately in ref
-            isImportingRef.current = true;
+            console.log(`[DropZone] Starting import with paths:`, event.payload.paths);
             setImporting(true);
 
             importAssets.mutateAsync({
               libraryId: currentLibrary.id,
               filePaths: event.payload.paths,
               folderPath: currentFolder,
-            }).then(() => {
-              console.log("[DropZone] Import completed");
-              isImportingRef.current = false;
+            }).then((importedAssets) => {
+              console.log(`[DropZone] Import completed, ${importedAssets.length} assets imported`);
+
+              // Auto-tag images with AI
+              const imageAssets = importedAssets.filter(asset => asset.file_type === 'image');
+              if (imageAssets.length > 0) {
+                console.log(`[DropZone] Auto-tagging ${imageAssets.length} images with AI`);
+
+                // Tag each image asynchronously (don't wait for completion)
+                imageAssets.forEach(async (asset) => {
+                  try {
+                    console.log(`[DropZone] Starting AI tagging for asset: ${asset.id}`);
+                    await aiTagAsset(asset.id);
+                    console.log(`[DropZone] AI tagging completed for asset: ${asset.id}`);
+                  } catch (error) {
+                    console.error(`[DropZone] AI tagging failed for asset ${asset.id}:`, error);
+                  }
+                });
+              }
+
+              globalImportInProgress = false;
               setImporting(false);
             }).catch((e) => {
-              console.error("[DropZone] Import failed:", e);
-              isImportingRef.current = false;
+              console.error(`[DropZone] Import failed:`, e);
+              globalImportInProgress = false;
               setImporting(false);
             });
+          } else {
+            // No paths to import, reset flag
+            console.log(`[DropZone] No paths to import, resetting flag`);
+            globalImportInProgress = false;
           }
         }
       });
@@ -79,9 +122,9 @@ export function DropZone({ children }: DropZoneProps) {
     setupListener();
 
     return () => {
-      console.log("[DropZone] Unregistering drag drop listener (unmount)");
-      isMounted = false;
-      unlisten?.();
+      console.log(`[DropZone ${componentId}] Component unmounting`);
+      // Don't unregister the global listener on unmount
+      // It will be cleaned up when the app closes
     };
   }, []); // Empty dependency array - only run once on mount
 

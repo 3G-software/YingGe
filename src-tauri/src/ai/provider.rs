@@ -92,8 +92,24 @@ impl AiProvider for OpenAiCompatibleProvider {
             "temperature": 0.3
         });
 
-        let url = format!("{}/chat/completions", self.endpoint);
-        let resp = self
+        // Smart URL construction:
+        // If endpoint already contains chat/completions path, use it directly
+        // Otherwise append /chat/completions to the base URL
+        let url = if self.endpoint.contains("/chat/completions") {
+            tracing::info!("Using endpoint as complete URL (contains /chat/completions)");
+            self.endpoint.clone()
+        } else {
+            tracing::info!("Appending /chat/completions to base endpoint");
+            format!("{}/chat/completions", self.endpoint)
+        };
+
+        tracing::info!("=== AI Vision Request ===");
+        tracing::info!("URL: {}", url);
+        tracing::info!("Model: {}", self.model);
+        tracing::info!("========================");
+
+        tracing::info!("Sending HTTP POST request...");
+        let resp = match self
             .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
@@ -101,11 +117,38 @@ impl AiProvider for OpenAiCompatibleProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AppError::Ai(format!("HTTP request failed: {}", e)))?;
+        {
+            Ok(r) => {
+                tracing::info!("HTTP request sent successfully");
+                r
+            }
+            Err(e) => {
+                tracing::error!("=== HTTP Request Failed ===");
+                tracing::error!("Error type: {}", e);
+                if e.is_timeout() {
+                    tracing::error!("Error reason: Request timeout");
+                } else if e.is_connect() {
+                    tracing::error!("Error reason: Connection failed - cannot reach server");
+                } else if e.is_request() {
+                    tracing::error!("Error reason: Request error");
+                } else if e.is_body() {
+                    tracing::error!("Error reason: Body error");
+                } else {
+                    tracing::error!("Error reason: Unknown");
+                }
+                tracing::error!("Full error: {:?}", e);
+                tracing::error!("==========================");
+                return Err(AppError::Ai(format!("HTTP request failed: {}", e)));
+            }
+        };
 
-        if !resp.status().is_success() {
-            let status = resp.status();
+        let status = resp.status();
+        tracing::info!("=== AI Response ===");
+        tracing::info!("Status: {}", status);
+
+        if !status.is_success() {
             let text = resp.text().await.unwrap_or_default();
+            tracing::error!("Error response: {}", text);
             return Err(AppError::Ai(format!(
                 "API returned {}: {}",
                 status, text
@@ -114,6 +157,9 @@ impl AiProvider for OpenAiCompatibleProvider {
 
         let json: serde_json::Value = resp.json().await
             .map_err(|e| AppError::Ai(format!("Failed to parse response: {}", e)))?;
+
+        tracing::info!("AI analysis completed successfully");
+        tracing::info!("==================");
 
         let content = json["choices"][0]["message"]["content"]
             .as_str()
@@ -143,8 +189,25 @@ impl AiProvider for OpenAiCompatibleProvider {
             "input": text
         });
 
-        let url = format!("{}/embeddings", self.endpoint);
-        let resp = self
+        // Smart URL construction:
+        // If endpoint already contains embeddings path, use it directly
+        // Otherwise append /embeddings to the base URL
+        let url = if self.endpoint.contains("/embeddings") {
+            tracing::info!("Using endpoint as complete URL (contains /embeddings)");
+            self.endpoint.clone()
+        } else {
+            tracing::info!("Appending /embeddings to base endpoint");
+            format!("{}/embeddings", self.endpoint)
+        };
+
+        tracing::info!("=== Embedding Request ===");
+        tracing::info!("URL: {}", url);
+        tracing::info!("Model: {}", self.embedding_model);
+        tracing::info!("Text length: {} chars", text.len());
+        tracing::info!("========================");
+
+        tracing::info!("Sending embedding HTTP request...");
+        let resp = match self
             .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
@@ -152,7 +215,30 @@ impl AiProvider for OpenAiCompatibleProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AppError::Ai(format!("Embedding request failed: {}", e)))?;
+        {
+            Ok(r) => {
+                tracing::info!("Embedding HTTP request sent successfully");
+                r
+            }
+            Err(e) => {
+                tracing::error!("=== Embedding HTTP Request Failed ===");
+                tracing::error!("Error type: {}", e);
+                if e.is_timeout() {
+                    tracing::error!("Error reason: Request timeout");
+                } else if e.is_connect() {
+                    tracing::error!("Error reason: Connection failed - cannot reach server");
+                } else if e.is_request() {
+                    tracing::error!("Error reason: Request error");
+                } else if e.is_body() {
+                    tracing::error!("Error reason: Body error");
+                } else {
+                    tracing::error!("Error reason: Unknown");
+                }
+                tracing::error!("Full error: {:?}", e);
+                tracing::error!("====================================");
+                return Err(AppError::Ai(format!("Embedding request failed: {}", e)));
+            }
+        };
 
         if !resp.status().is_success() {
             let status = resp.status();
@@ -183,8 +269,22 @@ impl AiProvider for OpenAiCompatibleProvider {
             "max_tokens": 5
         });
 
-        let url = format!("{}/chat/completions", self.endpoint);
-        let resp = self
+        // Smart URL construction
+        let url = if self.endpoint.contains("/chat/completions") {
+            tracing::info!("Using endpoint as complete URL (contains /chat/completions)");
+            self.endpoint.clone()
+        } else {
+            tracing::info!("Appending /chat/completions to base endpoint");
+            format!("{}/chat/completions", self.endpoint)
+        };
+
+        tracing::info!("=== Testing AI Connection ===");
+        tracing::info!("URL: {}", url);
+        tracing::info!("Model: {}", self.model);
+        tracing::info!("============================");
+
+        tracing::info!("Sending test HTTP request...");
+        let resp = match self
             .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
@@ -192,9 +292,50 @@ impl AiProvider for OpenAiCompatibleProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AppError::Ai(format!("Connection test failed: {}", e)))?;
+        {
+            Ok(r) => {
+                tracing::info!("Test HTTP request sent successfully");
+                r
+            }
+            Err(e) => {
+                tracing::error!("=== Connection Test Failed ===");
+                tracing::error!("Error type: {}", e);
+                if e.is_timeout() {
+                    tracing::error!("Error reason: Request timeout");
+                } else if e.is_connect() {
+                    tracing::error!("Error reason: Connection failed - cannot reach server");
+                    tracing::error!("Possible causes:");
+                    tracing::error!("  1. Wrong endpoint URL");
+                    tracing::error!("  2. Network firewall blocking the connection");
+                    tracing::error!("  3. Server is down or unreachable");
+                    tracing::error!("  4. DNS resolution failed");
+                } else if e.is_request() {
+                    tracing::error!("Error reason: Request error");
+                } else if e.is_body() {
+                    tracing::error!("Error reason: Body error");
+                } else {
+                    tracing::error!("Error reason: Unknown");
+                }
+                tracing::error!("Full error: {:?}", e);
+                tracing::error!("=============================");
+                return Err(AppError::Ai(format!("Connection test failed: {}", e)));
+            }
+        };
 
-        Ok(resp.status().is_success())
+        let status = resp.status();
+        tracing::info!("=== Connection Test Response ===");
+        tracing::info!("Status: {}", status);
+
+        if !status.is_success() {
+            let text = resp.text().await.unwrap_or_default();
+            tracing::error!("Error response: {}", text);
+            tracing::info!("===============================");
+        } else {
+            tracing::info!("Connection test successful!");
+            tracing::info!("===============================");
+        }
+
+        Ok(status.is_success())
     }
 }
 
