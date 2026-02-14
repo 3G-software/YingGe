@@ -29,9 +29,18 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
 
   useEffect(() => {
     if (detail?.asset.file_type === "image") {
+      console.log("[AssetDetail] Loading image for asset:", assetId, "file_type:", detail.asset.file_type);
       getAssetFilePath(assetId).then((path) => {
-        setFileSrc(convertFileSrc(path));
+        console.log("[AssetDetail] Got file path:", path);
+        const src = convertFileSrc(path);
+        console.log("[AssetDetail] Converted to src:", src);
+        setFileSrc(src);
+      }).catch((e) => {
+        console.error("[AssetDetail] Failed to get file path:", e);
       });
+    } else {
+      console.log("[AssetDetail] Not an image, file_type:", detail?.asset.file_type);
+      setFileSrc(null);
     }
   }, [assetId, detail]);
 

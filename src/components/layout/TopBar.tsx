@@ -18,7 +18,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ onSearch }: TopBarProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const {
     viewMode,
     setViewMode,

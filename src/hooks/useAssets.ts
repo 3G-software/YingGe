@@ -42,9 +42,9 @@ export function useImportAssets() {
       filePaths: string[];
       folderPath: string;
     }) => api.importAssets(libraryId, filePaths, folderPath),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["assets"] });
-      queryClient.invalidateQueries({ queryKey: ["folders"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["assets"], refetchType: "all" });
+      await queryClient.invalidateQueries({ queryKey: ["folders"], refetchType: "all" });
     },
   });
 }

@@ -27,6 +27,9 @@ export const getLibrary = (id: string) =>
 export const deleteLibrary = (id: string) =>
   invoke<void>("delete_library", { id });
 
+export const deleteLibraryWithFiles = (id: string) =>
+  invoke<void>("delete_library_with_files", { id });
+
 // --- Asset ---
 
 export const importAssets = (
@@ -159,6 +162,22 @@ export const mergeSpritesheet = (params: {
 
 export const splitImage = (assetId: string, rows: number, cols: number) =>
   invoke<Asset[]>("split_image", { assetId, rows, cols });
+
+export interface CompressResult {
+  asset: Asset;
+  original_size: number;
+  compressed_size: number;
+  compression_ratio: number;
+}
+
+export const compressImage = (params: {
+  assetId: string;
+  maxWidth?: number;
+  maxHeight?: number;
+  quality: number;
+  outputFormat: string;
+  suffix: string;
+}) => invoke<CompressResult>("compress_image", params);
 
 // --- Menu ---
 

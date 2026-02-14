@@ -15,7 +15,8 @@
     "export": "导出",
     "loading": "加载中...",
     "error": "错误",
-    "success": "成功"
+    "success": "成功",
+    "comingSoon": "即将推出"
   },
   "library": {
     "title": "资源库",
@@ -49,7 +50,15 @@
     "dragDrop": "或拖放文件到主窗口",
     "importing": "导入中...",
     "supported": "支持图片、音频和视频文件",
-    "targetFolder": "目标文件夹"
+    "targetFolder": "目标文件夹",
+    "aiNotConfigured": "AI 未配置",
+    "aiNotConfiguredMessage": "您尚未配置 AI 参数。配置后导入图片时可自动生成标签和描述。",
+    "aiConnectionFailed": "AI 连接失败",
+    "aiConnectionFailedMessage": "无法连接到 AI 服务，自动标签功能暂时不可用。请检查网络连接或 AI 配置。",
+    "goToSettings": "前往设置",
+    "continueImport": "继续导入",
+    "dontShowAgain": "不再提示",
+    "ok": "知道了"
   },
   "delete": {
     "title": "确认删除",
@@ -109,7 +118,40 @@
   "tools": {
     "title": "工具",
     "removeBackground": "移除背景",
+    "removeBackgroundDesc": "使用颜色键方法移除图片背景",
     "spritesheet": "合并精灵图",
-    "splitImage": "分割图片"
+    "spritesheetDesc": "将多张图片合并为精灵图，并生成游戏引擎描述文件",
+    "splitImage": "分割图片",
+    "splitImageDesc": "将图片按网格分割为多个子图片",
+    "compressImage": "压缩图片",
+    "compressImageDesc": "压缩图片体积，支持调整尺寸和质量"
+  },
+  "compress": {
+    "selectAsset": "请先在资源列表中选择图片",
+    "assetsSelected": "张图片已选择",
+    "assetsCompressed": "张图片压缩成功",
+    "assetsFailed": "张失败",
+    "avgReduction": "平均压缩率",
+    "settings": "压缩设置",
+    "maxWidth": "最大宽度",
+    "maxHeight": "最大高度",
+    "optional": "可选",
+    "quality": "质量",
+    "smaller": "更小",
+    "better": "更好",
+    "outputFormat": "输出格式",
+    "smallerSize": "体积更小",
+    "lossless": "无损",
+    "success": "压缩成功",
+    "original": "原始大小",
+    "compressed": "压缩后",
+    "reduction": "压缩率",
+    "processing": "压缩中...",
+    "compress": "压缩图片"
+  },
+  "libraryMgmt": {
+    "title": "资源库管理",
+    "confirmDelete": "确认删除此资源库？",
+    "deleteWarning": "此操作将永久删除资源库及其所有文件，无法恢复！"
   }
 }

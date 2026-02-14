@@ -15,7 +15,8 @@
     "export": "Export",
     "loading": "Loading...",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "comingSoon": "Coming Soon"
   },
   "library": {
     "title": "Library",
@@ -49,7 +50,15 @@
     "dragDrop": "Or drag and drop files directly onto the main window",
     "importing": "Importing...",
     "supported": "Supports images, audio, and video files",
-    "targetFolder": "Target folder"
+    "targetFolder": "Target folder",
+    "aiNotConfigured": "AI Not Configured",
+    "aiNotConfiguredMessage": "AI parameters are not configured. Once configured, tags and descriptions can be automatically generated when importing images.",
+    "aiConnectionFailed": "AI Connection Failed",
+    "aiConnectionFailedMessage": "Unable to connect to AI service. Auto-tagging is temporarily unavailable. Please check your network connection or AI configuration.",
+    "goToSettings": "Go to Settings",
+    "continueImport": "Continue Import",
+    "dontShowAgain": "Don't show again",
+    "ok": "OK"
   },
   "delete": {
     "title": "Confirm Delete",
@@ -109,7 +118,40 @@
   "tools": {
     "title": "Tools",
     "removeBackground": "Remove Background",
-    "spritesheet": "Merge Spritesheet",
-    "splitImage": "Split Image"
+    "removeBackgroundDesc": "Remove image background using color-key method",
+    "spritesheet": "Sprite Sheet",
+    "spritesheetDesc": "Merge multiple images into a sprite sheet with game engine descriptors",
+    "splitImage": "Split Image",
+    "splitImageDesc": "Split an image into a grid of sub-images",
+    "compressImage": "Compress Image",
+    "compressImageDesc": "Compress image size by adjusting dimensions and quality"
+  },
+  "compress": {
+    "selectAsset": "Please select image(s) from the asset list first",
+    "assetsSelected": "image(s) selected",
+    "assetsCompressed": "image(s) compressed successfully",
+    "assetsFailed": "failed",
+    "avgReduction": "Average reduction",
+    "settings": "Compression Settings",
+    "maxWidth": "Max Width",
+    "maxHeight": "Max Height",
+    "optional": "Optional",
+    "quality": "Quality",
+    "smaller": "Smaller",
+    "better": "Better",
+    "outputFormat": "Output Format",
+    "smallerSize": "Smaller size",
+    "lossless": "Lossless",
+    "success": "Compression Successful",
+    "original": "Original Size",
+    "compressed": "Compressed",
+    "reduction": "Reduction",
+    "processing": "Compressing...",
+    "compress": "Compress Image"
+  },
+  "libraryMgmt": {
+    "title": "Library Management",
+    "confirmDelete": "Delete this library?",
+    "deleteWarning": "This will permanently delete the library and all its files. This cannot be undone!"
   }
 }

@@ -6,25 +6,28 @@ pub async fn update_menu_language(app: AppHandle, language: String) -> Result<()
         .ok_or("Failed to get main window")?;
 
     // Determine menu text based on language
-    let (settings_text, file_text, import_text, tags_text, tag_mgmt_text,
-         tools_text, remove_bg_text, merge_sprite_text, split_img_text,
+    let (settings_text, library_mgmt_text, file_text, import_text, tags_text, tag_mgmt_text,
+         tools_text, remove_bg_text, merge_sprite_text, split_img_text, compress_img_text,
          plugins_text, import_plugin_text, help_text, about_text, plugin_dev_text) =
         if language == "en" {
-            ("Settings", "File", "Import", "Tags", "Tag Management",
-             "Tools", "Remove Background", "Merge Spritesheet", "Split Image",
+            ("Settings", "Library Management", "File", "Import", "Tags", "Tag Management",
+             "Tools", "Remove Background", "Merge Spritesheet", "Split Image", "Compress Image",
              "Plugins", "Import Plugin", "Help", "About", "Plugin Development Guide")
         } else {
             // Default to Chinese
-            ("设置", "文件", "导入", "标签", "标签管理",
-             "工具", "移除背景", "合并精灵图", "分割图片",
+            ("设置", "资源库管理", "文件", "导入", "标签", "标签管理",
+             "工具", "移除背景", "合并精灵图", "分割图片", "压缩图片",
              "插件", "导入插件", "帮助", "关于", "插件开发指导")
         };
 
     // Create App menu (YingGe)
     let settings_item = MenuItemBuilder::with_id("settings", settings_text).build(&app)
         .map_err(|e| e.to_string())?;
+    let library_mgmt_item = MenuItemBuilder::with_id("library-management", library_mgmt_text).build(&app)
+        .map_err(|e| e.to_string())?;
     let app_menu = SubmenuBuilder::new(&app, "YingGe")
         .item(&settings_item)
+        .item(&library_mgmt_item)
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -51,10 +54,13 @@ pub async fn update_menu_language(app: AppHandle, language: String) -> Result<()
         .map_err(|e| e.to_string())?;
     let split_image_item = MenuItemBuilder::with_id("split-image", split_img_text).build(&app)
         .map_err(|e| e.to_string())?;
+    let compress_image_item = MenuItemBuilder::with_id("compress-image", compress_img_text).build(&app)
+        .map_err(|e| e.to_string())?;
     let tools_menu = SubmenuBuilder::new(&app, tools_text)
         .item(&remove_bg_item)
         .item(&merge_sprite_item)
         .item(&split_image_item)
+        .item(&compress_image_item)
         .build()
         .map_err(|e| e.to_string())?;
 

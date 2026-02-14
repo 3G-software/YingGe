@@ -60,6 +60,14 @@ export function Sidebar() {
   const [rootExpanded, setRootExpanded] = useState(true);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
+  // Auto-select first library if no library is selected
+  // This hook must be before any early returns to follow React's rules of hooks
+  useEffect(() => {
+    if (libraries && libraries.length > 0 && !currentLibrary) {
+      setCurrentLibrary(libraries[0]);
+    }
+  }, [libraries, currentLibrary, setCurrentLibrary]);
+
   // Folder mutations
   const createFolderMutation = useMutation({
     mutationFn: ({ folderName, parentPath }: { folderName: string; parentPath: string }) =>
@@ -91,13 +99,6 @@ export function Sidebar() {
   });
 
   if (!sidebarOpen) return null;
-
-  // Auto-select first library if no library is selected
-  useEffect(() => {
-    if (libraries && libraries.length > 0 && !currentLibrary) {
-      setCurrentLibrary(libraries[0]);
-    }
-  }, [libraries, currentLibrary, setCurrentLibrary]);
 
   const handleCreateLibrary = () => {
     if (newLibName && newLibPath) {
@@ -320,7 +321,7 @@ export function Sidebar() {
             </button>
           </div>
 
-          <button
+          <div
             onClick={() => {
               setCurrentFolder("/");
               // Navigate to main view if currently on settings or other pages
@@ -328,7 +329,7 @@ export function Sidebar() {
                 window.location.hash = '#/';
               }
             }}
-            className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm rounded transition-colors ${
+            className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm rounded transition-colors cursor-pointer ${
               currentFolder === "/"
                 ? "bg-primary/20 text-primary"
                 : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
@@ -350,7 +351,7 @@ export function Sidebar() {
             <span className="text-xs opacity-60">
               {rootAssetsData?.total || 0}
             </span>
-          </button>
+          </div>
 
           {/* New Folder Dialog under root */}
           {rootExpanded && showNewFolder && newFolderParent === "/" && (
@@ -374,7 +375,7 @@ export function Sidebar() {
             </div>
           )}
 
-          {folders?.map((folder, index) => {
+          {folders?.map((folder) => {
             const depth = folder.path.split("/").filter(p => p).length;
             const indentPx = depth * 15;
             const hasChildren = folders.some(f => f.path.startsWith(folder.path + "/"));
@@ -403,7 +404,7 @@ export function Sidebar() {
                       className="w-full px-2 py-1.5 text-sm bg-bg rounded border border-primary focus:outline-none"
                     />
                   ) : (
-                    <button
+                    <div
                       onClick={() => {
                         setCurrentFolder(folder.path);
                         // Navigate to main view if currently on settings or other pages
@@ -415,7 +416,7 @@ export function Sidebar() {
                         e.stopPropagation();
                         handleContextMenu(e, folder.path);
                       }}
-                      className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm rounded transition-colors ${
+                      className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm rounded transition-colors cursor-pointer ${
                         currentFolder === folder.path
                           ? "bg-primary/20 text-primary"
                           : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
@@ -443,7 +444,7 @@ export function Sidebar() {
                         {folder.name}
                       </span>
                       <span className="text-xs opacity-60">{folder.asset_count}</span>
-                    </button>
+                    </div>
                   )}
                 </div>
 

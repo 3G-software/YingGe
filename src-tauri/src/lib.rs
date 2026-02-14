@@ -22,8 +22,10 @@ pub fn run() {
         .setup(|app| {
             // Create App menu (YingGe)
             let settings_item = MenuItemBuilder::with_id("settings", "设置").build(app)?;
+            let library_mgmt_item = MenuItemBuilder::with_id("library-management", "资源库管理").build(app)?;
             let app_menu = SubmenuBuilder::new(app, "YingGe")
                 .item(&settings_item)
+                .item(&library_mgmt_item)
                 .build()?;
 
             // Create File menu
@@ -42,10 +44,12 @@ pub fn run() {
             let remove_bg_item = MenuItemBuilder::with_id("remove-background", "移除背景").build(app)?;
             let merge_sprite_item = MenuItemBuilder::with_id("merge-spritesheet", "合并精灵图").build(app)?;
             let split_image_item = MenuItemBuilder::with_id("split-image", "分割图片").build(app)?;
+            let compress_image_item = MenuItemBuilder::with_id("compress-image", "压缩图片").build(app)?;
             let tools_menu = SubmenuBuilder::new(app, "工具")
                 .item(&remove_bg_item)
                 .item(&merge_sprite_item)
                 .item(&split_image_item)
+                .item(&compress_image_item)
                 .build()?;
 
             // Create Plugins menu
@@ -81,6 +85,9 @@ pub fn run() {
                     "settings" => {
                         let _ = window.eval("window.location.hash = '#/settings'");
                     }
+                    "library-management" => {
+                        let _ = window.emit("menu-library-management", ());
+                    }
                     "import" => {
                         let _ = window.emit("menu-import", ());
                     }
@@ -95,6 +102,9 @@ pub fn run() {
                     }
                     "split-image" => {
                         let _ = window.emit("menu-split-image", ());
+                    }
+                    "compress-image" => {
+                        let _ = window.emit("menu-compress-image", ());
                     }
                     "import-plugin" => {
                         let _ = window.emit("menu-import-plugin", ());
@@ -137,6 +147,7 @@ pub fn run() {
             commands::library::list_libraries,
             commands::library::get_library,
             commands::library::delete_library,
+            commands::library::delete_library_with_files,
             // Asset commands
             commands::asset::import_assets,
             commands::asset::get_assets,
@@ -172,6 +183,7 @@ pub fn run() {
             commands::processing::remove_background,
             commands::processing::merge_spritesheet,
             commands::processing::split_image,
+            commands::processing::compress_image,
             // Menu commands
             commands::menu::update_menu_language,
         ])

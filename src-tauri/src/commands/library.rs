@@ -55,3 +55,23 @@ pub async fn delete_library(id: String, pool: State<'_, SqlitePool>) -> Result<(
     queries::delete_library(&pool, &id).await?;
     Ok(())
 }
+
+/// Delete library and all its files from disk
+#[tauri::command]
+pub async fn delete_library_with_files(id: String, pool: State<'_, SqlitePool>) -> Result<(), AppError> {
+    // Get library info first
+    let library = queries::get_library(&pool, &id).await?;
+    let root_path = std::path::Path::new(&library.root_path);
+
+    // Delete from database first
+    queries::delete_library(&pool, &id).await?;
+
+    // Then delete files from disk
+    if root_path.exists() {
+        tracing::info!("Deleting library files at: {:?}", root_path);
+        std::fs::remove_dir_all(root_path)?;
+        tracing::info!("Library files deleted successfully");
+    }
+
+    Ok(())
+}

@@ -10,7 +10,9 @@ import { DropZone } from "./components/asset/DropZone";
 import { TagManager } from "./components/tag/TagManager";
 import { SettingsPage } from "./components/settings/SettingsPage";
 import { ToolsPage } from "./components/processing/ToolsPage";
+import { CompressDialog } from "./components/processing/CompressDialog";
 import { CreateLibraryModal } from "./components/library/CreateLibraryModal";
+import { LibraryManagementDialog } from "./components/library/LibraryManagementDialog";
 import { useAssets } from "./hooks/useAssets";
 import { useLibraries } from "./hooks/useLibrary";
 import { useAppStore } from "./stores/appStore";
@@ -27,10 +29,12 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const { currentLibrary, setCurrentLibrary } = useAppStore();
+  const { currentLibrary, setCurrentLibrary, selectedAssetIds } = useAppStore();
   const [route, setRoute] = useState("/");
   const [showImport, setShowImport] = useState(false);
   const [showCreateLibrary, setShowCreateLibrary] = useState(false);
+  const [showCompress, setShowCompress] = useState(false);
+  const [showLibraryMgmt, setShowLibraryMgmt] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Asset[] | null>(null);
 
@@ -69,21 +73,34 @@ function AppContent() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  // Listen for menu import event
+  // Listen for menu events
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    let unlistenImport: (() => void) | undefined;
+    let unlistenCompress: (() => void) | undefined;
+    let unlistenLibraryMgmt: (() => void) | undefined;
 
     const setupListener = async () => {
       const appWindow = getCurrentWebviewWindow();
-      unlisten = await appWindow.listen("menu-import", () => {
+      unlistenImport = await appWindow.listen("menu-import", () => {
+        console.log("[App] menu-import event received");
         setShowImport(true);
+      });
+      unlistenCompress = await appWindow.listen("menu-compress-image", () => {
+        console.log("[App] menu-compress-image event received");
+        setShowCompress(true);
+      });
+      unlistenLibraryMgmt = await appWindow.listen("menu-library-management", () => {
+        console.log("[App] menu-library-management event received");
+        setShowLibraryMgmt(true);
       });
     };
 
     setupListener();
 
     return () => {
-      unlisten?.();
+      unlistenImport?.();
+      unlistenCompress?.();
+      unlistenLibraryMgmt?.();
     };
   }, []);
 
@@ -121,6 +138,7 @@ function AppContent() {
   };
 
   const renderPage = () => {
+    console.log("[App] renderPage called, route:", route);
     switch (route) {
       case "/tags":
         return (
@@ -135,6 +153,7 @@ function AppContent() {
           </div>
         );
       case "/tools":
+        console.log("[App] Rendering ToolsPage");
         return (
           <div className="flex flex-1 overflow-hidden p-6">
             <ToolsPage />
@@ -150,7 +169,7 @@ function AppContent() {
 
     return (
       <div className="flex flex-1 overflow-hidden p-6">
-        <DropZone>
+        <DropZone onOpenSettings={() => { window.location.hash = "#/settings"; }}>
           <AssetGrid assets={displayAssets} onAssetClick={handleAssetClick} />
           {assetsData && !searchResults && (
             <div className="px-4 py-2 border-t border-border text-xs text-text-secondary">
@@ -202,10 +221,25 @@ function AppContent() {
       ) : (
         renderPage()
       )}
-      <AssetImport open={showImport} onClose={() => setShowImport(false)} />
+      <AssetImport
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onOpenSettings={() => {
+          window.location.hash = "#/settings";
+        }}
+      />
+      <CompressDialog
+        open={showCompress}
+        assetIds={selectedAssetIds}
+        onClose={() => setShowCompress(false)}
+      />
       <CreateLibraryModal
         open={showCreateLibrary}
         onClose={() => setShowCreateLibrary(false)}
+      />
+      <LibraryManagementDialog
+        open={showLibraryMgmt}
+        onClose={() => setShowLibraryMgmt(false)}
       />
     </MainLayout>
   );

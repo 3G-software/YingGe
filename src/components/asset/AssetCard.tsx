@@ -10,7 +10,7 @@ interface AssetCardProps {
 }
 
 export function AssetCard({ asset, onClick }: AssetCardProps) {
-  const { selectedAssetIds, toggleAssetSelection } = useAppStore();
+  const { selectedAssetIds, toggleAssetSelection, setSelectedAssetIds } = useAppStore();
   const isSelected = selectedAssetIds.includes(asset.id);
   const [thumbSrc, setThumbSrc] = useState<string | null>(null);
 
@@ -25,6 +25,20 @@ export function AssetCard({ asset, onClick }: AssetCardProps) {
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleAssetSelection(asset.id);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // If holding Cmd/Ctrl, toggle selection without opening detail
+    if (e.metaKey || e.ctrlKey) {
+      toggleAssetSelection(asset.id);
+    } else if (e.shiftKey) {
+      // Shift+click could be used for range selection in the future
+      toggleAssetSelection(asset.id);
+    } else {
+      // Normal click: select this asset only and open detail
+      setSelectedAssetIds([asset.id]);
+      onClick();
+    }
   };
 
   const fileIcon = () => {
@@ -46,7 +60,7 @@ export function AssetCard({ asset, onClick }: AssetCardProps) {
 
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       className={`group relative rounded-lg border transition-all cursor-pointer overflow-hidden ${
         isSelected
           ? "border-primary bg-primary/10"

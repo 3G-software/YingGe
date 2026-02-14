@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::db::{models::Asset, queries};
 use crate::error::AppError;
-use crate::processing::{background, descriptor, spritesheet};
+use crate::processing::{background, compress, descriptor, spritesheet};
 
 #[tauri::command]
 pub async fn remove_background(
@@ -233,4 +233,143 @@ pub async fn split_image(
     }
 
     Ok(results)
+}
+
+#[derive(serde::Serialize)]
+pub struct CompressResult {
+    pub asset: Asset,
+    pub original_size: i64,
+    pub compressed_size: i64,
+    pub compression_ratio: f64,
+}
+
+#[tauri::command]
+pub async fn compress_image(
+    asset_id: String,
+    max_width: Option<u32>,
+    max_height: Option<u32>,
+    quality: u8,
+    output_format: String, // "jpeg" or "png"
+    suffix: String,        // localized suffix like "_compressed" or "_压缩"
+    pool: State<'_, SqlitePool>,
+) -> Result<CompressResult, AppError> {
+    tracing::info!("=== Compress Image Started ===");
+    tracing::info!("asset_id: {}, quality: {}, format: {}, suffix: {}", asset_id, quality, output_format, suffix);
+
+    let asset = queries::get_asset(&pool, &asset_id).await?;
+    tracing::info!("Asset found: {} ({})", asset.file_name, asset.relative_path);
+
+    let library = queries::get_library(&pool, &asset.library_id).await?;
+    let library_root = std::path::Path::new(&library.root_path);
+    let source_path = library_root.join(&asset.relative_path);
+    tracing::info!("Source path: {:?}", source_path);
+
+    if !source_path.exists() {
+        tracing::error!("Source file does not exist: {:?}", source_path);
+        return Err(AppError::NotFound(format!("Source file not found: {:?}", source_path)));
+    }
+
+    let original_size = asset.file_size;
+
+    // Compress the image
+    tracing::info!("Compressing image...");
+    let compressed_img = compress::compress_image(&source_path, max_width, max_height, quality)?;
+    tracing::info!("Image compressed, dimensions: {}x{}", compressed_img.width(), compressed_img.height());
+
+    // Save as new asset
+    let new_id = Uuid::new_v4().to_string();
+
+    // Save to the same folder as the original asset
+    let output_dir = if asset.folder_path.is_empty() || asset.folder_path == "/" {
+        library_root.join("assets")
+    } else {
+        library_root.join(&asset.folder_path)
+    };
+    tracing::info!("Output directory: {:?}", output_dir);
+
+    if let Err(e) = std::fs::create_dir_all(&output_dir) {
+        tracing::error!("Failed to create output directory {:?}: {}", output_dir, e);
+        return Err(AppError::Io(e));
+    }
+    tracing::info!("Output directory created/verified");
+
+    let (output_ext, mime_type, output_bytes) = if output_format == "jpeg" || output_format == "jpg" {
+        let bytes = compress::compress_to_jpeg_bytes(&compressed_img, quality)?;
+        ("jpg", "image/jpeg", bytes)
+    } else {
+        let bytes = compress::compress_to_png_bytes(&compressed_img)?;
+        ("png", "image/png", bytes)
+    };
+
+    let output_path = output_dir.join(format!("{}.{}", new_id, output_ext));
+    tracing::info!("Writing compressed image to: {:?}", output_path);
+
+    if let Err(e) = std::fs::write(&output_path, &output_bytes) {
+        tracing::error!("Failed to write compressed image to {:?}: {}", output_path, e);
+        return Err(AppError::Io(e));
+    }
+    tracing::info!("Compressed image written successfully, size: {} bytes", output_bytes.len());
+
+    let relative_path = if asset.folder_path.is_empty() || asset.folder_path == "/" {
+        format!("assets/{}.{}", new_id, output_ext)
+    } else {
+        format!("{}/{}.{}", asset.folder_path, new_id, output_ext)
+    };
+    let compressed_size = output_bytes.len() as i64;
+    let compression_ratio = if original_size > 0 {
+        (1.0 - (compressed_size as f64 / original_size as f64)) * 100.0
+    } else {
+        0.0
+    };
+
+    // Generate output filename with localized suffix
+    let base_name = if let Some(dot_pos) = asset.file_name.rfind('.') {
+        &asset.file_name[..dot_pos]
+    } else {
+        &asset.file_name
+    };
+    let output_name = format!("{}{}.{}", base_name, suffix, output_ext);
+
+    let thumb_path =
+        crate::storage::thumbnail::generate_thumbnail(&output_path, library_root, &new_id).ok();
+
+    let file_hash = crate::storage::file_ops::compute_file_hash(&output_path)?;
+
+    let new_asset = Asset {
+        id: new_id.clone(),
+        library_id: asset.library_id.clone(),
+        file_name: output_name,
+        original_name: asset.original_name.clone(),
+        relative_path,
+        file_type: "image".to_string(),
+        mime_type: mime_type.to_string(),
+        file_size: compressed_size,
+        file_hash,
+        width: Some(compressed_img.width() as i32),
+        height: Some(compressed_img.height() as i32),
+        duration_ms: None,
+        description: asset.description.clone(),
+        ai_description: asset.ai_description.clone(),
+        thumbnail_path: thumb_path,
+        folder_path: asset.folder_path.clone(),
+        created_at: String::new(),
+        updated_at: String::new(),
+        imported_at: String::new(),
+    };
+
+    let saved = queries::insert_asset(&pool, &new_asset).await?;
+
+    // Copy tags from original asset
+    let original_tags = queries::get_asset_tags(&pool, &asset_id).await?;
+    if !original_tags.is_empty() {
+        let tag_ids: Vec<String> = original_tags.iter().map(|t| t.id.clone()).collect();
+        queries::assign_tags(&pool, &new_id, &tag_ids).await?;
+    }
+
+    Ok(CompressResult {
+        asset: saved,
+        original_size,
+        compressed_size,
+        compression_ratio,
+    })
 }

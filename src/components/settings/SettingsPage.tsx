@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, TestTube, Check, X, Languages } from "lucide-react";
+import { Save, TestTube, Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import type { AiConfigInput } from "../../types/asset";
