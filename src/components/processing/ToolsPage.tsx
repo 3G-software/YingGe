@@ -3,17 +3,24 @@ import { Eraser, Grid3x3, Scissors, Minimize2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
 import { CompressDialog } from "./CompressDialog";
+import { SpritesheetDialog } from "./SpritesheetDialog";
 
 export function ToolsPage() {
   const { t } = useTranslation();
   const selectedAssetIds = useAppStore((s) => s.selectedAssetIds);
   const [showCompressDialog, setShowCompressDialog] = useState(false);
+  const [showSpritesheetDialog, setShowSpritesheetDialog] = useState(false);
 
   console.log("[ToolsPage] Render, selectedAssetIds:", selectedAssetIds, "showCompressDialog:", showCompressDialog);
 
   const handleCompressClick = () => {
     console.log("[ToolsPage] Compress button clicked, setting showCompressDialog to true");
     setShowCompressDialog(true);
+  };
+
+  const handleSpritesheetClick = () => {
+    console.log("[ToolsPage] Spritesheet button clicked, setting showSpritesheetDialog to true");
+    setShowSpritesheetDialog(true);
   };
 
   const tools = [
@@ -28,8 +35,8 @@ export function ToolsPage() {
       icon: Grid3x3,
       name: t("tools.spritesheet"),
       description: t("tools.spritesheetDesc"),
-      enabled: false,
-      onClick: () => {},
+      enabled: true,
+      onClick: handleSpritesheetClick,
     },
     {
       icon: Scissors,
@@ -78,6 +85,12 @@ export function ToolsPage() {
         open={showCompressDialog}
         assetIds={selectedAssetIds}
         onClose={() => setShowCompressDialog(false)}
+      />
+
+      <SpritesheetDialog
+        open={showSpritesheetDialog}
+        assetIds={selectedAssetIds}
+        onClose={() => setShowSpritesheetDialog(false)}
       />
     </div>
   );

@@ -5,11 +5,13 @@ import {
   Save,
   Sparkles,
   Tag as TagIcon,
+  Download,
 } from "lucide-react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { useAssetDetail, useRenameAsset, useUpdateDescription } from "../../hooks/useAssets";
 import { useRemoveTags } from "../../hooks/useTags";
-import { aiTagAsset, getAssetFilePath } from "../../services/tauriBridge";
+import { aiTagAsset, getAssetFilePath, getSpritesheetDescriptor, getSpritesheetDescriptorWithFormat } from "../../services/tauriBridge";
 
 interface AssetDetailProps {
   assetId: string;
@@ -17,6 +19,7 @@ interface AssetDetailProps {
 }
 
 export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
+  const { t } = useTranslation();
   const { data: detail, refetch } = useAssetDetail(assetId);
   const renameAsset = useRenameAsset();
   const updateDesc = useUpdateDescription();
@@ -26,6 +29,17 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
   const [editValue, setEditValue] = useState("");
   const [fileSrc, setFileSrc] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [hasDescriptor, setHasDescriptor] = useState(false);
+  const [showFormatDialog, setShowFormatDialog] = useState(false);
+
+  useEffect(() => {
+    // Check if this asset has a spritesheet descriptor
+    getSpritesheetDescriptor(assetId).then((descriptor) => {
+      setHasDescriptor(!!descriptor);
+    }).catch(() => {
+      setHasDescriptor(false);
+    });
+  }, [assetId]);
 
   useEffect(() => {
     if (detail?.asset.file_type === "image") {
@@ -69,6 +83,46 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
 
   const handleRemoveTag = (tagId: string) => {
     removeTags.mutate({ assetId: asset.id, tagIds: [tagId] });
+  };
+
+  const handleDownloadDescriptor = async (format: string) => {
+    try {
+      const descriptor = await getSpritesheetDescriptorWithFormat(assetId, format);
+      if (!descriptor) {
+        console.error("No descriptor found for format:", format);
+        return;
+      }
+
+      // Determine file extension and mime type from format
+      let extension = "json";
+      let mimeType = "application/json";
+
+      if (format === "xml_unity") {
+        extension = "xml";
+        mimeType = "application/xml";
+      } else if (format === "xml_cocos" || format === "plist_cocos2d") {
+        extension = "plist";
+        mimeType = "application/xml";
+      }
+
+      // Get base filename without extension
+      const baseName = asset.file_name.replace(/\.[^.]+$/, "");
+
+      // Create and download file
+      const blob = new Blob([descriptor], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${baseName}.${extension}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setShowFormatDialog(false);
+    } catch (e) {
+      console.error("Failed to download descriptor:", e);
+    }
   };
 
   return (
@@ -228,7 +282,66 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
             <span>{new Date(asset.imported_at).toLocaleString()}</span>
           </div>
         </div>
+
+        {/* Spritesheet Descriptor */}
+        {hasDescriptor && (
+          <div className="p-3 border-t border-border">
+            <button
+              onClick={() => setShowFormatDialog(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+            >
+              <Download size={14} />
+              {t("asset.downloadDescriptor")}
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Format Selection Dialog */}
+      {showFormatDialog && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
+          <div className="bg-bg-secondary rounded-lg border border-border shadow-xl w-[320px]">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-base font-medium">{t("asset.selectDescriptorFormat")}</h3>
+              <button
+                onClick={() => setShowFormatDialog(false)}
+                className="text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 space-y-2">
+              <button
+                onClick={() => handleDownloadDescriptor("json")}
+                className="w-full px-4 py-3 text-left bg-bg-tertiary hover:bg-border rounded-lg transition-colors"
+              >
+                <div className="font-medium">JSON</div>
+                <div className="text-xs text-text-secondary mt-1">
+                  {t("asset.jsonFormat")}
+                </div>
+              </button>
+              <button
+                onClick={() => handleDownloadDescriptor("xml_unity")}
+                className="w-full px-4 py-3 text-left bg-bg-tertiary hover:bg-border rounded-lg transition-colors"
+              >
+                <div className="font-medium">Unity XML</div>
+                <div className="text-xs text-text-secondary mt-1">
+                  {t("asset.unityFormat")}
+                </div>
+              </button>
+              <button
+                onClick={() => handleDownloadDescriptor("plist_cocos2d")}
+                className="w-full px-4 py-3 text-left bg-bg-tertiary hover:bg-border rounded-lg transition-colors"
+              >
+                <div className="font-medium">Cocos2d Plist</div>
+                <div className="text-xs text-text-secondary mt-1">
+                  {t("asset.cocosFormat")}
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

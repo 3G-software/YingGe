@@ -42,5 +42,14 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         }
     }
 
+    // Run second migration
+    let migration_sql_2 = include_str!("../../migrations/002_spritesheet_metadata.sql");
+    for statement in migration_sql_2.split(';') {
+        let stmt = statement.trim();
+        if !stmt.is_empty() {
+            sqlx::query(stmt).execute(pool).await.ok();
+        }
+    }
+
     Ok(())
 }

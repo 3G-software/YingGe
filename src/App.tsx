@@ -11,8 +11,10 @@ import { TagManager } from "./components/tag/TagManager";
 import { SettingsPage } from "./components/settings/SettingsPage";
 import { ToolsPage } from "./components/processing/ToolsPage";
 import { CompressDialog } from "./components/processing/CompressDialog";
+import { SpritesheetDialog } from "./components/processing/SpritesheetDialog";
 import { CreateLibraryModal } from "./components/library/CreateLibraryModal";
 import { LibraryManagementDialog } from "./components/library/LibraryManagementDialog";
+import { AboutDialog } from "./components/common/AboutDialog";
 import { useAssets } from "./hooks/useAssets";
 import { useLibraries } from "./hooks/useLibrary";
 import { useAppStore } from "./stores/appStore";
@@ -34,7 +36,9 @@ function AppContent() {
   const [showImport, setShowImport] = useState(false);
   const [showCreateLibrary, setShowCreateLibrary] = useState(false);
   const [showCompress, setShowCompress] = useState(false);
+  const [showSpritesheet, setShowSpritesheet] = useState(false);
   const [showLibraryMgmt, setShowLibraryMgmt] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Asset[] | null>(null);
 
@@ -77,7 +81,10 @@ function AppContent() {
   useEffect(() => {
     let unlistenImport: (() => void) | undefined;
     let unlistenCompress: (() => void) | undefined;
+    let unlistenSpritesheet: (() => void) | undefined;
     let unlistenLibraryMgmt: (() => void) | undefined;
+    let unlistenAbout: (() => void) | undefined;
+    let unlistenPluginDevGuide: (() => void) | undefined;
 
     const setupListener = async () => {
       const appWindow = getCurrentWebviewWindow();
@@ -89,9 +96,22 @@ function AppContent() {
         console.log("[App] menu-compress-image event received");
         setShowCompress(true);
       });
+      unlistenSpritesheet = await appWindow.listen("menu-merge-spritesheet", () => {
+        console.log("[App] menu-merge-spritesheet event received");
+        setShowSpritesheet(true);
+      });
       unlistenLibraryMgmt = await appWindow.listen("menu-library-management", () => {
         console.log("[App] menu-library-management event received");
         setShowLibraryMgmt(true);
+      });
+      unlistenAbout = await appWindow.listen("menu-about", () => {
+        console.log("[App] menu-about event received");
+        setShowAbout(true);
+      });
+      unlistenPluginDevGuide = await appWindow.listen("menu-plugin-dev-guide", () => {
+        console.log("[App] menu-plugin-dev-guide event received");
+        // TODO: Open plugin development guide
+        alert("插件开发指导功能即将推出");
       });
     };
 
@@ -100,7 +120,10 @@ function AppContent() {
     return () => {
       unlistenImport?.();
       unlistenCompress?.();
+      unlistenSpritesheet?.();
       unlistenLibraryMgmt?.();
+      unlistenAbout?.();
+      unlistenPluginDevGuide?.();
     };
   }, []);
 
@@ -233,6 +256,11 @@ function AppContent() {
         assetIds={selectedAssetIds}
         onClose={() => setShowCompress(false)}
       />
+      <SpritesheetDialog
+        open={showSpritesheet}
+        assetIds={selectedAssetIds}
+        onClose={() => setShowSpritesheet(false)}
+      />
       <CreateLibraryModal
         open={showCreateLibrary}
         onClose={() => setShowCreateLibrary(false)}
@@ -240,6 +268,10 @@ function AppContent() {
       <LibraryManagementDialog
         open={showLibraryMgmt}
         onClose={() => setShowLibraryMgmt(false)}
+      />
+      <AboutDialog
+        open={showAbout}
+        onClose={() => setShowAbout(false)}
       />
     </MainLayout>
   );

@@ -160,10 +160,85 @@ pub async fn merge_spritesheet(
 
     let saved = queries::insert_asset(&pool, &new_asset).await?;
 
+    // Save spritesheet metadata to database
+    let sprite_info_json = serde_json::to_string(&info.frames)?;
+    sqlx::query(
+        "INSERT INTO spritesheet_metadata (asset_id, sprite_info, sheet_width, sheet_height) VALUES (?, ?, ?, ?)"
+    )
+    .bind(&saved.id)
+    .bind(&sprite_info_json)
+    .bind(info.width as i64)
+    .bind(info.height as i64)
+    .execute(pool.inner())
+    .await?;
+
     Ok(SpritesheetResult {
         image_asset: saved,
         descriptor_content,
     })
+}
+
+#[tauri::command]
+pub async fn get_spritesheet_descriptor(
+    asset_id: String,
+    pool: State<'_, SqlitePool>,
+) -> Result<Option<String>, AppError> {
+    // Check if this asset has spritesheet metadata in database
+    let exists = sqlx::query_scalar::<_, i64>("SELECT 1 FROM spritesheet_metadata WHERE asset_id = ?")
+        .bind(&asset_id)
+        .fetch_optional(pool.inner())
+        .await?
+        .is_some();
+
+    if exists {
+        // Return a placeholder to indicate descriptor exists
+        // The actual content will be generated on demand with format
+        Ok(Some(String::from("exists")))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub async fn get_spritesheet_descriptor_with_format(
+    asset_id: String,
+    format: String,
+    pool: State<'_, SqlitePool>,
+) -> Result<Option<String>, AppError> {
+    // Check if this asset has spritesheet metadata
+    let row = sqlx::query_as::<_, (String, i64, i64)>(
+        "SELECT sprite_info, sheet_width, sheet_height FROM spritesheet_metadata WHERE asset_id = ?"
+    )
+    .bind(&asset_id)
+    .fetch_optional(pool.inner())
+    .await?;
+
+    if let Some((sprite_info_json, sheet_width, sheet_height)) = row {
+        // Parse sprite info
+        let frames: Vec<spritesheet::SpriteFrame> = serde_json::from_str(&sprite_info_json)?;
+
+        // Reconstruct SpritesheetInfo
+        let info = spritesheet::SpritesheetInfo {
+            width: sheet_width as u32,
+            height: sheet_height as u32,
+            frames,
+        };
+
+        // Get asset filename
+        let asset = queries::get_asset(&pool, &asset_id).await?;
+        let img_filename = &asset.file_name;
+
+        // Generate descriptor based on format
+        let descriptor_content = match format.as_str() {
+            "xml_unity" => descriptor::generate_unity_xml_descriptor(&info, img_filename),
+            "xml_cocos" | "plist_cocos2d" => descriptor::generate_cocos2d_plist_descriptor(&info, img_filename),
+            _ => descriptor::generate_json_descriptor(&info, img_filename),
+        };
+
+        return Ok(Some(descriptor_content));
+    }
+
+    Ok(None)
 }
 
 #[tauri::command]

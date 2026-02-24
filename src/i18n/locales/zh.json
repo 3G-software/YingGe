@@ -41,7 +41,12 @@
     "tags": "标签",
     "addTag": "添加标签",
     "aiTag": "AI 标签",
-    "aiTagging": "AI 标签中..."
+    "aiTagging": "AI 标签中...",
+    "downloadDescriptor": "下载精灵图描述文件",
+    "selectDescriptorFormat": "选择描述文件格式",
+    "jsonFormat": "通用 JSON 格式，适用于大多数游戏引擎",
+    "unityFormat": "Unity 引擎专用 XML 格式",
+    "cocosFormat": "Cocos2d 引擎专用 Plist 格式"
   },
   "import": {
     "title": "导入资源",
@@ -149,9 +154,31 @@
     "processing": "压缩中...",
     "compress": "压缩图片"
   },
+  "spritesheet": {
+    "title": "合并精灵图",
+    "selectAsset": "请先从资源列表中选择图片",
+    "assetsSelected": "张图片已选择",
+    "outputName": "输出文件名",
+    "columns": "列数",
+    "gridSize": "网格大小",
+    "padding": "间距",
+    "descriptorFormat": "描述文件格式",
+    "success": "合并成功",
+    "successMessage": "精灵图已生成并添加到资源库",
+    "downloadDescriptor": "下载描述文件",
+    "processing": "合并中...",
+    "merge": "合并精灵图"
+  },
   "libraryMgmt": {
     "title": "资源库管理",
     "confirmDelete": "确认删除此资源库？",
     "deleteWarning": "此操作将永久删除资源库及其所有文件，无法恢复！"
+  },
+  "about": {
+    "title": "关于",
+    "subtitle": "游戏资源管理工具",
+    "version": "版本",
+    "description": "YingGe 是一款专为游戏开发者设计的资源管理工具，支持图片、音频和视频等多种资源类型，提供 AI 智能标签、语义搜索等强大功能。",
+    "rights": "保留所有权利。"
   }
 }

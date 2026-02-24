@@ -182,6 +182,8 @@ pub fn run() {
             // Processing commands
             commands::processing::remove_background,
             commands::processing::merge_spritesheet,
+            commands::processing::get_spritesheet_descriptor,
+            commands::processing::get_spritesheet_descriptor_with_format,
             commands::processing::split_image,
             commands::processing::compress_image,
             // Menu commands

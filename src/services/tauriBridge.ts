@@ -160,6 +160,12 @@ export const mergeSpritesheet = (params: {
   descriptorFormat: string;
 }) => invoke<SpritesheetResult>("merge_spritesheet", params);
 
+export const getSpritesheetDescriptor = (assetId: string) =>
+  invoke<string | null>("get_spritesheet_descriptor", { assetId });
+
+export const getSpritesheetDescriptorWithFormat = (assetId: string, format: string) =>
+  invoke<string | null>("get_spritesheet_descriptor_with_format", { assetId, format });
+
 export const splitImage = (assetId: string, rows: number, cols: number) =>
   invoke<Asset[]>("split_image", { assetId, rows, cols });
 
