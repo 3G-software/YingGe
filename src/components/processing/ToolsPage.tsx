@@ -1,26 +1,30 @@
 import { useState } from "react";
-import { Eraser, Grid3x3, Scissors, Minimize2 } from "lucide-react";
+import { Eraser, Grid3x3, Scissors, Minimize2, Maximize2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
 import { CompressDialog } from "./CompressDialog";
 import { SpritesheetDialog } from "./SpritesheetDialog";
+import { ResizeDialog } from "./ResizeDialog";
 
 export function ToolsPage() {
   const { t } = useTranslation();
   const selectedAssetIds = useAppStore((s) => s.selectedAssetIds);
   const [showCompressDialog, setShowCompressDialog] = useState(false);
   const [showSpritesheetDialog, setShowSpritesheetDialog] = useState(false);
+  const [showResizeDialog, setShowResizeDialog] = useState(false);
 
-  console.log("[ToolsPage] Render, selectedAssetIds:", selectedAssetIds, "showCompressDialog:", showCompressDialog);
-
-  const handleCompressClick = () => {
-    console.log("[ToolsPage] Compress button clicked, setting showCompressDialog to true");
-    setShowCompressDialog(true);
-  };
+  console.log("[ToolsPage] Render, selectedAssetIds:", selectedAssetIds);
+  console.log("[ToolsPage] Dialog states - compress:", showCompressDialog, "spritesheet:", showSpritesheetDialog, "resize:", showResizeDialog);
 
   const handleSpritesheetClick = () => {
     console.log("[ToolsPage] Spritesheet button clicked, setting showSpritesheetDialog to true");
     setShowSpritesheetDialog(true);
+  };
+
+  const handleResizeClick = () => {
+    console.log("[ToolsPage] Resize button clicked!");
+    setShowResizeDialog(true);
+    console.log("[ToolsPage] showResizeDialog set to true");
   };
 
   const tools = [
@@ -50,7 +54,14 @@ export function ToolsPage() {
       name: t("tools.compressImage"),
       description: t("tools.compressImageDesc"),
       enabled: true,
-      onClick: handleCompressClick,
+      onClick: () => setShowCompressDialog(true),
+    },
+    {
+      icon: Maximize2,
+      name: t("tools.resizeImage"),
+      description: t("tools.resizeImageDesc"),
+      enabled: true,
+      onClick: handleResizeClick,
     },
   ];
 
@@ -86,11 +97,15 @@ export function ToolsPage() {
         assetIds={selectedAssetIds}
         onClose={() => setShowCompressDialog(false)}
       />
-
       <SpritesheetDialog
         open={showSpritesheetDialog}
         assetIds={selectedAssetIds}
         onClose={() => setShowSpritesheetDialog(false)}
+      />
+      <ResizeDialog
+        open={showResizeDialog}
+        assetIds={selectedAssetIds}
+        onClose={() => setShowResizeDialog(false)}
       />
     </div>
   );

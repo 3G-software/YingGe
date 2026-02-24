@@ -12,6 +12,7 @@ import { SettingsPage } from "./components/settings/SettingsPage";
 import { ToolsPage } from "./components/processing/ToolsPage";
 import { CompressDialog } from "./components/processing/CompressDialog";
 import { SpritesheetDialog } from "./components/processing/SpritesheetDialog";
+import { ResizeDialog } from "./components/processing/ResizeDialog";
 import { CreateLibraryModal } from "./components/library/CreateLibraryModal";
 import { LibraryManagementDialog } from "./components/library/LibraryManagementDialog";
 import { AboutDialog } from "./components/common/AboutDialog";
@@ -37,6 +38,7 @@ function AppContent() {
   const [showCreateLibrary, setShowCreateLibrary] = useState(false);
   const [showCompress, setShowCompress] = useState(false);
   const [showSpritesheet, setShowSpritesheet] = useState(false);
+  const [showResize, setShowResize] = useState(false);
   const [showLibraryMgmt, setShowLibraryMgmt] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
@@ -82,6 +84,7 @@ function AppContent() {
     let unlistenImport: (() => void) | undefined;
     let unlistenCompress: (() => void) | undefined;
     let unlistenSpritesheet: (() => void) | undefined;
+    let unlistenResize: (() => void) | undefined;
     let unlistenLibraryMgmt: (() => void) | undefined;
     let unlistenAbout: (() => void) | undefined;
     let unlistenPluginDevGuide: (() => void) | undefined;
@@ -99,6 +102,10 @@ function AppContent() {
       unlistenSpritesheet = await appWindow.listen("menu-merge-spritesheet", () => {
         console.log("[App] menu-merge-spritesheet event received");
         setShowSpritesheet(true);
+      });
+      unlistenResize = await appWindow.listen("menu-resize-image", () => {
+        console.log("[App] menu-resize-image event received");
+        setShowResize(true);
       });
       unlistenLibraryMgmt = await appWindow.listen("menu-library-management", () => {
         console.log("[App] menu-library-management event received");
@@ -121,6 +128,7 @@ function AppContent() {
       unlistenImport?.();
       unlistenCompress?.();
       unlistenSpritesheet?.();
+      unlistenResize?.();
       unlistenLibraryMgmt?.();
       unlistenAbout?.();
       unlistenPluginDevGuide?.();
@@ -260,6 +268,11 @@ function AppContent() {
         open={showSpritesheet}
         assetIds={selectedAssetIds}
         onClose={() => setShowSpritesheet(false)}
+      />
+      <ResizeDialog
+        open={showResize}
+        assetIds={selectedAssetIds}
+        onClose={() => setShowResize(false)}
       />
       <CreateLibraryModal
         open={showCreateLibrary}

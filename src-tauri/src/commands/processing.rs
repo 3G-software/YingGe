@@ -448,3 +448,174 @@ pub async fn compress_image(
         compression_ratio,
     })
 }
+
+/// Merge multiple images into a sprite sheet with specified cell size
+#[tauri::command]
+pub async fn merge_spritesheet_with_size(
+    asset_ids: Vec<String>,
+    columns: u32,
+    rows: u32,
+    cell_width: u32,
+    cell_height: u32,
+    padding: u32,
+    output_name: String,
+    pool: State<'_, SqlitePool>,
+) -> Result<Asset, AppError> {
+    if asset_ids.is_empty() {
+        return Err(AppError::InvalidInput("No assets selected".to_string()));
+    }
+
+    tracing::info!("Merging {} images into spritesheet: {}x{} cells of {}x{}",
+        asset_ids.len(), columns, rows, cell_width, cell_height);
+
+    // Load asset info and paths
+    let first_asset = queries::get_asset(&pool, &asset_ids[0]).await?;
+    let library = queries::get_library(&pool, &first_asset.library_id).await?;
+    let library_root = std::path::Path::new(&library.root_path);
+
+    let mut image_paths = Vec::new();
+    for id in &asset_ids {
+        let asset = queries::get_asset(&pool, id).await?;
+        let path = library_root.join(&asset.relative_path);
+        image_paths.push((asset.file_name.clone(), path));
+    }
+
+    let paths_ref: Vec<(String, &std::path::Path)> = image_paths
+        .iter()
+        .map(|(name, path)| (name.clone(), path.as_path()))
+        .collect();
+
+    let (sheet_img, info) = spritesheet::merge_spritesheet_with_size(
+        &paths_ref, columns, rows, cell_width, cell_height, padding
+    )?;
+
+    // Save sprite sheet
+    let new_id = Uuid::new_v4().to_string();
+    let output_dir = library_root.join("assets");
+    std::fs::create_dir_all(&output_dir)?;
+    let output_path = output_dir.join(format!("{}.png", new_id));
+    sheet_img.save(&output_path)?;
+
+    let relative_path = format!("assets/{}.png", new_id);
+
+    let thumb_path =
+        crate::storage::thumbnail::generate_thumbnail(&output_path, library_root, &new_id).ok();
+
+    let file_size = std::fs::metadata(&output_path)?.len() as i64;
+    let file_hash = crate::storage::file_ops::compute_file_hash(&output_path)?;
+
+    let new_asset = Asset {
+        id: new_id,
+        library_id: first_asset.library_id.clone(),
+        file_name: format!("{}.png", output_name),
+        original_name: format!("{}.png", output_name),
+        relative_path,
+        file_type: "image".to_string(),
+        mime_type: "image/png".to_string(),
+        file_size,
+        file_hash,
+        width: Some(info.width as i32),
+        height: Some(info.height as i32),
+        duration_ms: None,
+        description: format!("Sprite sheet: {}x{} grid, {} frames", columns, rows, info.frames.len()),
+        ai_description: String::new(),
+        thumbnail_path: thumb_path,
+        folder_path: first_asset.folder_path.clone(),
+        created_at: String::new(),
+        updated_at: String::new(),
+        imported_at: String::new(),
+    };
+
+    let saved = queries::insert_asset(&pool, &new_asset).await?;
+    tracing::info!("Spritesheet created: {}", saved.file_name);
+
+    Ok(saved)
+}
+
+/// Resize an image to specified dimensions
+#[tauri::command]
+pub async fn resize_image(
+    asset_id: String,
+    width: u32,
+    height: u32,
+    maintain_aspect: bool,
+    suffix: String,
+    pool: State<'_, SqlitePool>,
+) -> Result<Asset, AppError> {
+    tracing::info!("Resizing image {} to {}x{}, maintain_aspect: {}",
+        asset_id, width, height, maintain_aspect);
+
+    let asset = queries::get_asset(&pool, &asset_id).await?;
+    let library = queries::get_library(&pool, &asset.library_id).await?;
+    let library_root = std::path::Path::new(&library.root_path);
+    let source_path = library_root.join(&asset.relative_path);
+
+    let resized_img = spritesheet::resize_image(&source_path, width, height, maintain_aspect)?;
+
+    // Save as new asset
+    let new_id = Uuid::new_v4().to_string();
+    let output_dir = if asset.folder_path.is_empty() || asset.folder_path == "/" {
+        library_root.join("assets")
+    } else {
+        library_root.join(&asset.folder_path)
+    };
+    std::fs::create_dir_all(&output_dir)?;
+
+    let output_path = output_dir.join(format!("{}.png", new_id));
+    resized_img.save(&output_path)?;
+
+    let relative_path = if asset.folder_path.is_empty() || asset.folder_path == "/" {
+        format!("assets/{}.png", new_id)
+    } else {
+        format!("{}/{}.png", asset.folder_path, new_id)
+    };
+
+    // Generate output filename with suffix
+    let base_name = if let Some(dot_pos) = asset.file_name.rfind('.') {
+        &asset.file_name[..dot_pos]
+    } else {
+        &asset.file_name
+    };
+    let output_name = format!("{}{}.png", base_name, suffix);
+
+    let thumb_path =
+        crate::storage::thumbnail::generate_thumbnail(&output_path, library_root, &new_id).ok();
+
+    let file_size = std::fs::metadata(&output_path)?.len() as i64;
+    let file_hash = crate::storage::file_ops::compute_file_hash(&output_path)?;
+
+    let new_asset = Asset {
+        id: new_id.clone(),
+        library_id: asset.library_id.clone(),
+        file_name: output_name,
+        original_name: asset.original_name.clone(),
+        relative_path,
+        file_type: "image".to_string(),
+        mime_type: "image/png".to_string(),
+        file_size,
+        file_hash,
+        width: Some(resized_img.width() as i32),
+        height: Some(resized_img.height() as i32),
+        duration_ms: None,
+        description: asset.description.clone(),
+        ai_description: asset.ai_description.clone(),
+        thumbnail_path: thumb_path,
+        folder_path: asset.folder_path.clone(),
+        created_at: String::new(),
+        updated_at: String::new(),
+        imported_at: String::new(),
+    };
+
+    let saved = queries::insert_asset(&pool, &new_asset).await?;
+
+    // Copy tags from original asset
+    let original_tags = queries::get_asset_tags(&pool, &asset_id).await?;
+    if !original_tags.is_empty() {
+        let tag_ids: Vec<String> = original_tags.iter().map(|t| t.id.clone()).collect();
+        queries::assign_tags(&pool, &new_id, &tag_ids).await?;
+    }
+
+    tracing::info!("Image resized: {} -> {}x{}", saved.file_name, resized_img.width(), resized_img.height());
+
+    Ok(saved)
+}

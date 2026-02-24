@@ -45,11 +45,13 @@ pub fn run() {
             let merge_sprite_item = MenuItemBuilder::with_id("merge-spritesheet", "合并精灵图").build(app)?;
             let split_image_item = MenuItemBuilder::with_id("split-image", "分割图片").build(app)?;
             let compress_image_item = MenuItemBuilder::with_id("compress-image", "压缩图片").build(app)?;
+            let resize_image_item = MenuItemBuilder::with_id("resize-image", "调整尺寸").build(app)?;
             let tools_menu = SubmenuBuilder::new(app, "工具")
                 .item(&remove_bg_item)
                 .item(&merge_sprite_item)
                 .item(&split_image_item)
                 .item(&compress_image_item)
+                .item(&resize_image_item)
                 .build()?;
 
             // Create Plugins menu
@@ -105,6 +107,9 @@ pub fn run() {
                     }
                     "compress-image" => {
                         let _ = window.emit("menu-compress-image", ());
+                    }
+                    "resize-image" => {
+                        let _ = window.emit("menu-resize-image", ());
                     }
                     "import-plugin" => {
                         let _ = window.emit("menu-import-plugin", ());
@@ -186,6 +191,8 @@ pub fn run() {
             commands::processing::get_spritesheet_descriptor_with_format,
             commands::processing::split_image,
             commands::processing::compress_image,
+            commands::processing::merge_spritesheet_with_size,
+            commands::processing::resize_image,
             // Menu commands
             commands::menu::update_menu_language,
         ])

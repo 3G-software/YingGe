@@ -129,7 +129,9 @@
     "splitImage": "分割图片",
     "splitImageDesc": "将图片按网格分割为多个子图片",
     "compressImage": "压缩图片",
-    "compressImageDesc": "压缩图片体积，支持调整尺寸和质量"
+    "compressImageDesc": "压缩图片体积，支持调整尺寸和质量",
+    "resizeImage": "调整尺寸",
+    "resizeImageDesc": "调整图片尺寸，支持保持宽高比"
   },
   "compress": {
     "selectAsset": "请先在资源列表中选择图片",
@@ -158,16 +160,38 @@
     "title": "合并精灵图",
     "selectAsset": "请先从资源列表中选择图片",
     "assetsSelected": "张图片已选择",
+    "selectedCount": "已选择 {{count}} 张图片",
     "outputName": "输出文件名",
     "columns": "列数",
+    "rows": "行数",
+    "cellWidth": "单元格宽度",
+    "cellHeight": "单元格高度",
     "gridSize": "网格大小",
     "padding": "间距",
     "descriptorFormat": "描述文件格式",
+    "preview": "预览尺寸",
+    "totalCells": "总单元格数",
+    "imagesUsed": "张图片使用",
     "success": "合并成功",
     "successMessage": "精灵图已生成并添加到资源库",
     "downloadDescriptor": "下载描述文件",
     "processing": "合并中...",
-    "merge": "合并精灵图"
+    "merge": "合并精灵图",
+    "noImages": "请先选择图片"
+  },
+  "resize": {
+    "title": "调整尺寸",
+    "selectedCount": "已选择 {{count}} 张图片",
+    "originalSize": "原始尺寸",
+    "presets": "预设尺寸",
+    "width": "宽度",
+    "height": "高度",
+    "maintainAspect": "保持宽高比",
+    "resize": "调整尺寸",
+    "noImages": "请先选择图片",
+    "progress": "处理中 {{success}}/{{total}}",
+    "partialError": "{{success}} 张成功，{{fail}} 张失败",
+    "suffix": "_调整"
   },
   "libraryMgmt": {
     "title": "资源库管理",
@@ -178,7 +202,14 @@
     "title": "关于",
     "subtitle": "游戏资源管理工具",
     "version": "版本",
-    "description": "YingGe 是一款专为游戏开发者设计的资源管理工具，支持图片、音频和视频等多种资源类型，提供 AI 智能标签、语义搜索等强大功能。",
-    "rights": "保留所有权利。"
+    "description": "影阁是一款专为游戏开发者设计的资源管理工具，支持图片、音频和视频等多种资源类型，提供 AI 智能标签、语义搜索等强大功能。",
+    "features": "主要功能",
+    "feature1": "资源库管理 - 创建和管理多个资源库",
+    "feature2": "智能标签 - AI 自动识别和标记图片内容",
+    "feature3": "图片处理 - 压缩、调整尺寸、合并精灵图",
+    "feature4": "快速搜索 - 关键词和语义搜索",
+    "rights": "保留所有权利。",
+    "allRightsReserved": "保留所有权利",
+    "copyright": "本软件仅供学习和个人使用，请勿用于商业用途。"
   }
 }

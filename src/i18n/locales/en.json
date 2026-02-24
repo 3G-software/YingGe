@@ -129,7 +129,9 @@
     "splitImage": "Split Image",
     "splitImageDesc": "Split an image into a grid of sub-images",
     "compressImage": "Compress Image",
-    "compressImageDesc": "Compress image size by adjusting dimensions and quality"
+    "compressImageDesc": "Compress image size by adjusting dimensions and quality",
+    "resizeImage": "Resize Image",
+    "resizeImageDesc": "Resize image dimensions with aspect ratio support"
   },
   "compress": {
     "selectAsset": "Please select image(s) from the asset list first",
@@ -158,16 +160,38 @@
     "title": "Merge Spritesheet",
     "selectAsset": "Please select image(s) from the asset list first",
     "assetsSelected": "image(s) selected",
+    "selectedCount": "{{count}} image(s) selected",
     "outputName": "Output Name",
     "columns": "Columns",
+    "rows": "Rows",
+    "cellWidth": "Cell Width",
+    "cellHeight": "Cell Height",
     "gridSize": "Grid Size",
     "padding": "Padding",
     "descriptorFormat": "Descriptor Format",
+    "preview": "Preview Size",
+    "totalCells": "Total Cells",
+    "imagesUsed": "image(s) used",
     "success": "Merge Successful",
     "successMessage": "Spritesheet has been generated and added to the library",
     "downloadDescriptor": "Download Descriptor",
     "processing": "Merging...",
-    "merge": "Merge Spritesheet"
+    "merge": "Merge Spritesheet",
+    "noImages": "Please select images first"
+  },
+  "resize": {
+    "title": "Resize Image",
+    "selectedCount": "{{count}} image(s) selected",
+    "originalSize": "Original Size",
+    "presets": "Presets",
+    "width": "Width",
+    "height": "Height",
+    "maintainAspect": "Maintain Aspect Ratio",
+    "resize": "Resize",
+    "noImages": "Please select images first",
+    "progress": "Processing {{success}}/{{total}}",
+    "partialError": "{{success}} succeeded, {{fail}} failed",
+    "suffix": "_resized"
   },
   "libraryMgmt": {
     "title": "Library Management",
@@ -179,6 +203,13 @@
     "subtitle": "Game Asset Management Tool",
     "version": "Version",
     "description": "YingGe is an asset management tool designed for game developers, supporting various asset types including images, audio, and video, with powerful features like AI smart tagging and semantic search.",
-    "rights": "All rights reserved."
+    "features": "Key Features",
+    "feature1": "Library Management - Create and manage multiple asset libraries",
+    "feature2": "Smart Tagging - AI-powered automatic image recognition and tagging",
+    "feature3": "Image Processing - Compress, resize, merge sprite sheets",
+    "feature4": "Quick Search - Keyword and semantic search",
+    "rights": "All rights reserved.",
+    "allRightsReserved": "All rights reserved",
+    "copyright": "This software is for learning and personal use only. Not for commercial use."
   }
 }

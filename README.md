@@ -108,10 +108,6 @@ YingGe supports any OpenAI-compatible API endpoint. Configure in Settings:
 
 Contributions are welcome. All contributors must agree to the [Contributor License Agreement](CLA.md) by signing off their commits.
 
-```bash
-git commit -s -m "Your commit message"
-```
-
 ## License
 
 This project is licensed under [CC BY-NC-SA 4.0](LICENSE).

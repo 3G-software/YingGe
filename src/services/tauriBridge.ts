@@ -185,6 +185,24 @@ export const compressImage = (params: {
   suffix: string;
 }) => invoke<CompressResult>("compress_image", params);
 
+export const mergeSpritesheetWithSize = (params: {
+  assetIds: string[];
+  columns: number;
+  rows: number;
+  cellWidth: number;
+  cellHeight: number;
+  padding: number;
+  outputName: string;
+}) => invoke<Asset>("merge_spritesheet_with_size", params);
+
+export const resizeImage = (params: {
+  assetId: string;
+  width: number;
+  height: number;
+  maintainAspect: boolean;
+  suffix: string;
+}) => invoke<Asset>("resize_image", params);
+
 // --- Menu ---
 
 export const updateMenuLanguage = (language: string) =>
