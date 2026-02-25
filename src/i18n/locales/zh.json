@@ -123,7 +123,9 @@
   "tools": {
     "title": "工具",
     "removeBackground": "移除背景",
-    "removeBackgroundDesc": "使用颜色键方法移除图片背景",
+    "removeBackgroundDesc": "使用智能算法自动识别图片主体并移除背景",
+    "imageEditor": "图片编辑器",
+    "imageEditorDesc": "像素级编辑图片，支持画笔和橡皮擦工具",
     "spritesheet": "合并精灵图",
     "spritesheetDesc": "将多张图片合并为精灵图，并生成游戏引擎描述文件",
     "splitImage": "分割图片",
@@ -177,7 +179,8 @@
     "downloadDescriptor": "下载描述文件",
     "processing": "合并中...",
     "merge": "合并精灵图",
-    "noImages": "请先选择图片"
+    "noImages": "请先选择图片",
+    "enableCompression": "启用压缩"
   },
   "resize": {
     "title": "调整尺寸",
@@ -211,5 +214,32 @@
     "rights": "保留所有权利。",
     "allRightsReserved": "保留所有权利",
     "copyright": "本软件仅供学习和个人使用，请勿用于商业用途。"
+  },
+  "removeBackground": {
+    "title": "移除背景",
+    "selectAsset": "请先从资源列表中选择一张图片",
+    "description": "使用智能算法自动识别图片主体并移除背景",
+    "algorithmInfo": "系统将自动检测图片中的主体对象，并将背景区域变为透明。适用于主体清晰、背景简单的图片。",
+    "success": "移除成功",
+    "successMessage": "背景已移除，新图片已添加到资源库",
+    "processing": "处理中...",
+    "remove": "移除背景"
+  },
+  "imageEditor": {
+    "title": "图片编辑器",
+    "tool": "工具",
+    "brush": "画笔",
+    "eraser": "橡皮擦",
+    "eyedropper": "吸管",
+    "color": "颜色",
+    "brushSize": "画笔大小",
+    "zoom": "缩放",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "reset": "重置",
+    "save": "保存",
+    "success": "保存成功",
+    "successMessage": "编辑后的图片已保存到资源库",
+    "processing": "保存中..."
   }
 }

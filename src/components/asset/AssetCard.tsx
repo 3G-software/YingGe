@@ -16,8 +16,12 @@ export function AssetCard({ asset, onClick }: AssetCardProps) {
 
   useEffect(() => {
     if (asset.file_type === "image" && asset.thumbnail_path) {
+      // Add cache busting by including asset.id and updated_at timestamp
       getThumbnailData(asset.id).then((dataUrl) => {
-        if (dataUrl) setThumbSrc(dataUrl);
+        if (dataUrl) {
+          // Add timestamp to prevent browser caching
+          setThumbSrc(`${dataUrl}#${asset.id}`);
+        }
       });
     }
   }, [asset.id, asset.file_type, asset.thumbnail_path]);

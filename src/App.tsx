@@ -13,6 +13,8 @@ import { ToolsPage } from "./components/processing/ToolsPage";
 import { CompressDialog } from "./components/processing/CompressDialog";
 import { SpritesheetDialog } from "./components/processing/SpritesheetDialog";
 import { ResizeDialog } from "./components/processing/ResizeDialog";
+import { RemoveBackgroundDialog } from "./components/processing/RemoveBackgroundDialog";
+import { ImageEditorDialog } from "./components/processing/ImageEditorDialog";
 import { CreateLibraryModal } from "./components/library/CreateLibraryModal";
 import { LibraryManagementDialog } from "./components/library/LibraryManagementDialog";
 import { AboutDialog } from "./components/common/AboutDialog";
@@ -39,6 +41,8 @@ function AppContent() {
   const [showCompress, setShowCompress] = useState(false);
   const [showSpritesheet, setShowSpritesheet] = useState(false);
   const [showResize, setShowResize] = useState(false);
+  const [showRemoveBackground, setShowRemoveBackground] = useState(false);
+  const [showImageEditor, setShowImageEditor] = useState(false);
   const [showLibraryMgmt, setShowLibraryMgmt] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
@@ -85,6 +89,8 @@ function AppContent() {
     let unlistenCompress: (() => void) | undefined;
     let unlistenSpritesheet: (() => void) | undefined;
     let unlistenResize: (() => void) | undefined;
+    let unlistenRemoveBackground: (() => void) | undefined;
+    let unlistenImageEditor: (() => void) | undefined;
     let unlistenLibraryMgmt: (() => void) | undefined;
     let unlistenAbout: (() => void) | undefined;
     let unlistenPluginDevGuide: (() => void) | undefined;
@@ -106,6 +112,14 @@ function AppContent() {
       unlistenResize = await appWindow.listen("menu-resize-image", () => {
         console.log("[App] menu-resize-image event received");
         setShowResize(true);
+      });
+      unlistenRemoveBackground = await appWindow.listen("menu-remove-background", () => {
+        console.log("[App] menu-remove-background event received");
+        setShowRemoveBackground(true);
+      });
+      unlistenImageEditor = await appWindow.listen("menu-image-editor", () => {
+        console.log("[App] menu-image-editor event received");
+        setShowImageEditor(true);
       });
       unlistenLibraryMgmt = await appWindow.listen("menu-library-management", () => {
         console.log("[App] menu-library-management event received");
@@ -129,6 +143,8 @@ function AppContent() {
       unlistenCompress?.();
       unlistenSpritesheet?.();
       unlistenResize?.();
+      unlistenRemoveBackground?.();
+      unlistenImageEditor?.();
       unlistenLibraryMgmt?.();
       unlistenAbout?.();
       unlistenPluginDevGuide?.();
@@ -201,7 +217,19 @@ function AppContent() {
     return (
       <div className="flex flex-1 overflow-hidden p-6">
         <DropZone onOpenSettings={() => { window.location.hash = "#/settings"; }}>
-          <AssetGrid assets={displayAssets} onAssetClick={handleAssetClick} />
+          <AssetGrid
+            assets={displayAssets}
+            onAssetClick={handleAssetClick}
+            onRemoveBackground={() => setShowRemoveBackground(true)}
+            onImageEditor={() => setShowImageEditor(true)}
+            onCompress={() => setShowCompress(true)}
+            onResize={() => setShowResize(true)}
+            onMergeSpritesheet={() => setShowSpritesheet(true)}
+            onSplitImage={() => {
+              // Split image functionality - to be implemented
+              console.log("Split image clicked");
+            }}
+          />
           {assetsData && !searchResults && (
             <div className="px-4 py-2 border-t border-border text-xs text-text-secondary">
               {assetsData.total} assets total
@@ -273,6 +301,16 @@ function AppContent() {
         open={showResize}
         assetIds={selectedAssetIds}
         onClose={() => setShowResize(false)}
+      />
+      <RemoveBackgroundDialog
+        open={showRemoveBackground}
+        assetId={selectedAssetIds.length === 1 ? selectedAssetIds[0] : null}
+        onClose={() => setShowRemoveBackground(false)}
+      />
+      <ImageEditorDialog
+        open={showImageEditor}
+        assetId={selectedAssetIds.length === 1 ? selectedAssetIds[0] : null}
+        onClose={() => setShowImageEditor(false)}
       />
       <CreateLibraryModal
         open={showCreateLibrary}

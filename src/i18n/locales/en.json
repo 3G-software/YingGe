@@ -123,7 +123,9 @@
   "tools": {
     "title": "Tools",
     "removeBackground": "Remove Background",
-    "removeBackgroundDesc": "Remove image background using color-key method",
+    "removeBackgroundDesc": "Automatically detect the main subject and remove background using smart algorithm",
+    "imageEditor": "Image Editor",
+    "imageEditorDesc": "Pixel-level image editing with brush and eraser tools",
     "spritesheet": "Sprite Sheet",
     "spritesheetDesc": "Merge multiple images into a sprite sheet with game engine descriptors",
     "splitImage": "Split Image",
@@ -177,7 +179,8 @@
     "downloadDescriptor": "Download Descriptor",
     "processing": "Merging...",
     "merge": "Merge Spritesheet",
-    "noImages": "Please select images first"
+    "noImages": "Please select images first",
+    "enableCompression": "Enable Compression"
   },
   "resize": {
     "title": "Resize Image",
@@ -211,5 +214,32 @@
     "rights": "All rights reserved.",
     "allRightsReserved": "All rights reserved",
     "copyright": "This software is for learning and personal use only. Not for commercial use."
+  },
+  "removeBackground": {
+    "title": "Remove Background",
+    "selectAsset": "Please select an image from the asset list first",
+    "description": "Automatically detect the main subject and remove background using smart algorithm",
+    "algorithmInfo": "The system will automatically detect the main subject in the image and make the background transparent. Works best with clear subjects and simple backgrounds.",
+    "success": "Removal Successful",
+    "successMessage": "Background removed, new image added to library",
+    "processing": "Processing...",
+    "remove": "Remove Background"
+  },
+  "imageEditor": {
+    "title": "Image Editor",
+    "tool": "Tool",
+    "brush": "Brush",
+    "eraser": "Eraser",
+    "eyedropper": "Eyedropper",
+    "color": "Color",
+    "brushSize": "Brush Size",
+    "zoom": "Zoom",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "reset": "Reset",
+    "save": "Save",
+    "success": "Save Successful",
+    "successMessage": "Edited image has been saved to library",
+    "processing": "Saving..."
   }
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { X, Grid3x3, Download } from "lucide-react";
+import { X, Grid3x3 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { mergeSpritesheet } from "../../services/tauriBridge";
+import { mergeSpritesheetWithSize } from "../../services/tauriBridge";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface SpritesheetDialogProps {
@@ -15,11 +15,12 @@ export function SpritesheetDialog({ open, assetIds, onClose }: SpritesheetDialog
   const [columns, setColumns] = useState(4);
   const [padding, setPadding] = useState(2);
   const [outputName, setOutputName] = useState("spritesheet");
-  const [descriptorFormat, setDescriptorFormat] = useState("json");
+  const [cellWidth, setCellWidth] = useState(128);
+  const [cellHeight, setCellHeight] = useState(128);
+  const [enableCompression, setEnableCompression] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{
     success: boolean;
-    descriptorContent?: string;
     errorMessage?: string;
   } | null>(null);
   const queryClient = useQueryClient();
@@ -37,17 +38,19 @@ export function SpritesheetDialog({ open, assetIds, onClose }: SpritesheetDialog
     setResult(null);
 
     try {
-      const res = await mergeSpritesheet({
+      await mergeSpritesheetWithSize({
         assetIds,
         columns: actualColumns,
+        rows,
+        cellWidth,
+        cellHeight,
         padding,
         outputName,
-        descriptorFormat,
+        enableCompression,
       });
 
       setResult({
         success: true,
-        descriptorContent: res.descriptor_content,
       });
 
       // Refresh assets list
@@ -68,23 +71,10 @@ export function SpritesheetDialog({ open, assetIds, onClose }: SpritesheetDialog
     setOutputName("spritesheet");
     setColumns(4);
     setPadding(2);
-    setDescriptorFormat("json");
+    setCellWidth(128);
+    setCellHeight(128);
+    setEnableCompression(false);
     onClose();
-  };
-
-  const handleDownloadDescriptor = () => {
-    if (!result?.descriptorContent) return;
-
-    const extension = descriptorFormat === "json" ? "json" : "xml";
-    const blob = new Blob([result.descriptorContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${outputName}.${extension}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -168,22 +158,54 @@ export function SpritesheetDialog({ open, assetIds, onClose }: SpritesheetDialog
             />
           </div>
 
-          {/* Descriptor format */}
+          {/* Cell Width */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              {t("spritesheet.descriptorFormat")}
+              {t("spritesheet.cellWidth")} ({cellWidth}px)
             </label>
-            <select
-              value={descriptorFormat}
-              onChange={(e) => setDescriptorFormat(e.target.value)}
+            <input
+              type="number"
+              min="16"
+              max="2048"
+              value={cellWidth}
+              onChange={(e) => setCellWidth(parseInt(e.target.value) || 128)}
               className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
               disabled={processing}
-            >
-              <option value="json">JSON</option>
-              <option value="xml_unity">Unity XML</option>
-              <option value="xml_cocos">Cocos2d XML</option>
-            </select>
+            />
           </div>
+
+          {/* Cell Height */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              {t("spritesheet.cellHeight")} ({cellHeight}px)
+            </label>
+            <input
+              type="number"
+              min="16"
+              max="2048"
+              value={cellHeight}
+              onChange={(e) => setCellHeight(parseInt(e.target.value) || 128)}
+              className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
+              disabled={processing}
+            />
+          </div>
+
+          {/* Enable Compression */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="enableCompression"
+              checked={enableCompression}
+              onChange={(e) => setEnableCompression(e.target.checked)}
+              className="w-4 h-4 rounded border-border bg-bg-tertiary focus:ring-2 focus:ring-primary"
+              disabled={processing}
+            />
+            <label htmlFor="enableCompression" className="text-sm font-medium cursor-pointer">
+              {t("spritesheet.enableCompression")}
+            </label>
+          </div>
+
+          {/* Descriptor format - removed */}
 
           {/* Results */}
           {result && (
@@ -192,18 +214,9 @@ export function SpritesheetDialog({ open, assetIds, onClose }: SpritesheetDialog
                 {result.success ? t("spritesheet.success") : t("common.error")}
               </p>
               {result.success && (
-                <>
-                  <p className="text-sm text-text-secondary mb-2">
-                    {t("spritesheet.successMessage")}
-                  </p>
-                  <button
-                    onClick={handleDownloadDescriptor}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-                  >
-                    <Download size={14} />
-                    {t("spritesheet.downloadDescriptor")}
-                  </button>
-                </>
+                <p className="text-sm text-text-secondary">
+                  {t("spritesheet.successMessage")}
+                </p>
               )}
               {result.errorMessage && (
                 <p className="text-sm text-red-400 mt-2 break-all">

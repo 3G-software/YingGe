@@ -146,11 +146,8 @@ export const testAiConnection = (config: AiConfigInput) =>
 
 // --- Processing ---
 
-export const removeBackground = (
-  assetId: string,
-  targetColor: [number, number, number],
-  tolerance: number
-) => invoke<Asset>("remove_background", { assetId, targetColor, tolerance });
+export const removeBackground = (assetId: string) =>
+  invoke<Asset>("remove_background", { assetId });
 
 export const mergeSpritesheet = (params: {
   assetIds: string[];
@@ -159,6 +156,17 @@ export const mergeSpritesheet = (params: {
   outputName: string;
   descriptorFormat: string;
 }) => invoke<SpritesheetResult>("merge_spritesheet", params);
+
+export const mergeSpritesheetWithSize = (params: {
+  assetIds: string[];
+  columns: number;
+  rows: number;
+  cellWidth: number;
+  cellHeight: number;
+  padding: number;
+  outputName: string;
+  enableCompression: boolean;
+}) => invoke<Asset>("merge_spritesheet_with_size", params);
 
 export const getSpritesheetDescriptor = (assetId: string) =>
   invoke<string | null>("get_spritesheet_descriptor", { assetId });
@@ -185,16 +193,6 @@ export const compressImage = (params: {
   suffix: string;
 }) => invoke<CompressResult>("compress_image", params);
 
-export const mergeSpritesheetWithSize = (params: {
-  assetIds: string[];
-  columns: number;
-  rows: number;
-  cellWidth: number;
-  cellHeight: number;
-  padding: number;
-  outputName: string;
-}) => invoke<Asset>("merge_spritesheet_with_size", params);
-
 export const resizeImage = (params: {
   assetId: string;
   width: number;
@@ -202,6 +200,9 @@ export const resizeImage = (params: {
   maintainAspect: boolean;
   suffix: string;
 }) => invoke<Asset>("resize_image", params);
+
+export const saveEditedImage = (assetId: string, imageData: string) =>
+  invoke<Asset>("save_edited_image", { assetId, imageData });
 
 // --- Menu ---
 

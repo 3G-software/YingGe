@@ -42,12 +42,14 @@ pub fn run() {
 
             // Create Tools menu with specific tools
             let remove_bg_item = MenuItemBuilder::with_id("remove-background", "移除背景").build(app)?;
+            let image_editor_item = MenuItemBuilder::with_id("image-editor", "图片编辑器").build(app)?;
             let merge_sprite_item = MenuItemBuilder::with_id("merge-spritesheet", "合并精灵图").build(app)?;
             let split_image_item = MenuItemBuilder::with_id("split-image", "分割图片").build(app)?;
             let compress_image_item = MenuItemBuilder::with_id("compress-image", "压缩图片").build(app)?;
             let resize_image_item = MenuItemBuilder::with_id("resize-image", "调整尺寸").build(app)?;
             let tools_menu = SubmenuBuilder::new(app, "工具")
                 .item(&remove_bg_item)
+                .item(&image_editor_item)
                 .item(&merge_sprite_item)
                 .item(&split_image_item)
                 .item(&compress_image_item)
@@ -98,6 +100,9 @@ pub fn run() {
                     }
                     "remove-background" => {
                         let _ = window.emit("menu-remove-background", ());
+                    }
+                    "image-editor" => {
+                        let _ = window.emit("menu-image-editor", ());
                     }
                     "merge-spritesheet" => {
                         let _ = window.emit("menu-merge-spritesheet", ());
@@ -193,6 +198,7 @@ pub fn run() {
             commands::processing::compress_image,
             commands::processing::merge_spritesheet_with_size,
             commands::processing::resize_image,
+            commands::processing::save_edited_image,
             // Menu commands
             commands::menu::update_menu_language,
         ])

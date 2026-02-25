@@ -1,11 +1,18 @@
 import { useState, useRef, useEffect, MouseEvent } from "react";
 import { AssetCard } from "./AssetCard";
+import { AssetContextMenu } from "./AssetContextMenu";
 import type { Asset } from "../../types/asset";
 import { useAppStore } from "../../stores/appStore";
 
 interface AssetGridProps {
   assets: Asset[];
   onAssetClick: (asset: Asset) => void;
+  onRemoveBackground: () => void;
+  onImageEditor: () => void;
+  onCompress: () => void;
+  onResize: () => void;
+  onMergeSpritesheet: () => void;
+  onSplitImage: () => void;
 }
 
 interface SelectionBox {
@@ -15,12 +22,22 @@ interface SelectionBox {
   endY: number;
 }
 
-export function AssetGrid({ assets, onAssetClick }: AssetGridProps) {
+export function AssetGrid({
+  assets,
+  onAssetClick,
+  onRemoveBackground,
+  onImageEditor,
+  onCompress,
+  onResize,
+  onMergeSpritesheet,
+  onSplitImage,
+}: AssetGridProps) {
   const viewMode = useAppStore((s) => s.viewMode);
-  const { setSelectedAssetIds } = useAppStore();
+  const { selectedAssetIds, setSelectedAssetIds } = useAppStore();
 
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -85,6 +102,15 @@ export function AssetGrid({ assets, onAssetClick }: AssetGridProps) {
   const handleMouseUp = () => {
     setIsSelecting(false);
     setSelectionBox(null);
+  };
+
+  const handleContextMenu = (e: MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    // Only show context menu if there are selected assets
+    if (selectedAssetIds.length > 0) {
+      setContextMenu({ x: e.clientX, y: e.clientY });
+    }
   };
 
   useEffect(() => {
@@ -164,6 +190,7 @@ export function AssetGrid({ assets, onAssetClick }: AssetGridProps) {
       className="flex-1 overflow-y-auto relative select-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
+      onContextMenu={handleContextMenu}
     >
       <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
         {assets.map((asset) => (
@@ -190,6 +217,22 @@ export function AssetGrid({ assets, onAssetClick }: AssetGridProps) {
             width: Math.abs(selectionBox.endX - selectionBox.startX),
             height: Math.abs(selectionBox.endY - selectionBox.startY),
           }}
+        />
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <AssetContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          assetCount={selectedAssetIds.length}
+          onClose={() => setContextMenu(null)}
+          onRemoveBackground={onRemoveBackground}
+          onImageEditor={onImageEditor}
+          onCompress={onCompress}
+          onResize={onResize}
+          onMergeSpritesheet={onMergeSpritesheet}
+          onSplitImage={onSplitImage}
         />
       )}
     </div>

@@ -13,7 +13,16 @@ pub fn compress_image(
     quality: u8, // 1-100, only affects JPEG
 ) -> Result<DynamicImage, AppError> {
     let img = ImageReader::open(path)?.decode()?;
+    compress_image_dynamic(&img, max_width, max_height, quality)
+}
 
+/// Compress a DynamicImage by resizing and/or reducing quality
+pub fn compress_image_dynamic(
+    img: &DynamicImage,
+    max_width: Option<u32>,
+    max_height: Option<u32>,
+    quality: u8,
+) -> Result<DynamicImage, AppError> {
     let (orig_w, orig_h) = (img.width(), img.height());
     let max_w = max_width.unwrap_or(orig_w);
     let max_h = max_height.unwrap_or(orig_h);
@@ -35,7 +44,7 @@ pub fn compress_image(
     let resized = if new_w != orig_w || new_h != orig_h {
         img.resize(new_w, new_h, image::imageops::FilterType::Lanczos3)
     } else {
-        img
+        img.clone()
     };
 
     Ok(resized)
