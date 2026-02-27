@@ -3,9 +3,11 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Upload } from "lucide-react";
 import { useImportAssets } from "../../hooks/useAssets";
 import { useAppStore } from "../../stores/appStore";
-import { aiTagAsset, getAiConfig } from "../../services/tauriBridge";
+import { aiTagAsset, getAiConfig, moveAssets } from "../../services/tauriBridge";
 import { AiConfigHintDialog } from "../common/AiConfigHintDialog";
 import type { AiConfig } from "../../types/asset";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 const STORAGE_KEY_DONT_SHOW_AI_NOT_CONFIGURED = "yingge_dont_show_ai_not_configured";
 const STORAGE_KEY_DONT_SHOW_AI_CONNECTION_FAILED = "yingge_dont_show_ai_connection_failed";
@@ -28,15 +30,18 @@ function isAiConfigValid(config: AiConfig | null): boolean {
 }
 
 export function DropZone({ children, onOpenSettings }: DropZoneProps) {
+  const { i18n } = useTranslation();
   const currentLibrary = useAppStore((s) => s.currentLibrary);
   const currentFolder = useAppStore((s) => s.currentFolder);
   const importAssets = useImportAssets();
+  const queryClient = useQueryClient();
   const [importing, setImporting] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showAiHint, setShowAiHint] = useState(false);
   const [aiHintMode, setAiHintMode] = useState<"not_configured" | "connection_failed">("not_configured");
   const [pendingPaths, setPendingPaths] = useState<string[] | null>(null);
   const [aiConfigValid, setAiConfigValid] = useState<boolean | null>(null);
+  const mousePositionRef = useRef({ x: 0, y: 0 });
 
   // Check AI config on mount
   useEffect(() => {
@@ -58,13 +63,23 @@ export function DropZone({ children, onOpenSettings }: DropZoneProps) {
 
     setImporting(true);
     try {
-      const importedAssets = await importAssets.mutateAsync({
+      const result = await importAssets.mutateAsync({
         libraryId: currentLibrary.id,
         filePaths: paths,
         folderPath: currentFolder,
       });
 
-      console.log(`[DropZone] Import completed, ${importedAssets.length} assets imported`);
+      const importedAssets = result.imported_assets;
+      const skippedFiles = result.skipped_files;
+
+      console.log(`[DropZone] Import completed, ${importedAssets.length} assets imported, ${skippedFiles.length} files skipped`);
+
+      // Show notification for skipped files
+      if (skippedFiles.length > 0) {
+        const fileList = skippedFiles.slice(0, 5).join(', ');
+        const more = skippedFiles.length > 5 ? ` and ${skippedFiles.length - 5} more` : '';
+        alert(`Skipped ${skippedFiles.length} unsupported file(s): ${fileList}${more}`);
+      }
 
       // Reset flags and hide importing indicator first
       globalImportInProgress = false;
@@ -83,8 +98,10 @@ export function DropZone({ children, onOpenSettings }: DropZoneProps) {
           for (const asset of imageAssets) {
             try {
               console.log(`[DropZone] Starting AI tagging for asset: ${asset.id}`);
-              await aiTagAsset(asset.id);
+              await aiTagAsset(asset.id, i18n.language);
               console.log(`[DropZone] AI tagging completed for asset: ${asset.id}`);
+              // Invalidate asset detail query to refresh UI if this asset is currently selected
+              queryClient.invalidateQueries({ queryKey: ['asset-detail', asset.id] });
             } catch (error) {
               console.error(`[DropZone] AI tagging failed for asset ${asset.id}:`, error);
               // Check if it's a connection error
@@ -102,7 +119,7 @@ export function DropZone({ children, onOpenSettings }: DropZoneProps) {
       globalImportInProgress = false;
       setImporting(false);
     }
-  }, [aiConfigValid]);
+  }, [aiConfigValid, i18n.language]);
 
   const handleDontShowAgain = useCallback(() => {
     if (aiHintMode === "not_configured") {
@@ -140,6 +157,15 @@ export function DropZone({ children, onOpenSettings }: DropZoneProps) {
     importStateRef.current = { currentLibrary, currentFolder, importAssets, shouldShowAiHint, doImport };
   }, [currentLibrary, currentFolder, importAssets, shouldShowAiHint, doImport]);
 
+  // Track mouse position
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePositionRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   // Register drag drop listener only once on mount
   useEffect(() => {
     const componentId = Math.random().toString(36).substring(7);
@@ -166,6 +192,43 @@ export function DropZone({ children, onOpenSettings }: DropZoneProps) {
         } else if (event.payload.type === "drop") {
           setIsDragOver(false);
 
+          // Check if this is an internal drag (asset movement)
+          const draggedAssetIds = (window as any).__draggedAssetIds;
+
+          if (draggedAssetIds && Array.isArray(draggedAssetIds) && draggedAssetIds.length > 0) {
+            // Internal drag: move assets to folder under mouse
+            const elements = document.elementsFromPoint(mousePositionRef.current.x, mousePositionRef.current.y);
+            let targetFolder: string | null = null;
+
+            // Look for folder elements with data-folder-path attribute
+            for (const el of elements) {
+              const folderPath = el.getAttribute('data-folder-path');
+              if (folderPath !== null) {
+                targetFolder = folderPath;
+                break;
+              }
+            }
+
+            if (targetFolder !== null) {
+              // Move assets to the target folder
+              moveAssets(draggedAssetIds, targetFolder)
+                .then(() => {
+                  queryClient.invalidateQueries({ queryKey: ["assets"], refetchType: "all" });
+                  queryClient.invalidateQueries({ queryKey: ["folders"], refetchType: "all" });
+                  queryClient.invalidateQueries({ queryKey: ["root-assets-count"], refetchType: "all" });
+                })
+                .catch((error) => {
+                  console.error('[DropZone] Failed to move assets:', error);
+                  alert(`移动资源失败: ${error}`);
+                });
+            }
+
+            // Clear the dragged asset IDs
+            (window as any).__draggedAssetIds = null;
+            return;
+          }
+
+          // External drag: import files
           // Atomic check-and-set: if already importing, bail out immediately
           if (globalImportInProgress) {
             console.log(`[DropZone] Import already in progress, ignoring drop event`);

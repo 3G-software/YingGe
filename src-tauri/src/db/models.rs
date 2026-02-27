@@ -25,6 +25,8 @@ pub struct Asset {
     pub duration_ms: Option<i64>,
     pub description: String,
     pub ai_description: String,
+    pub ai_description_en: String,
+    pub ai_description_zh: String,
     pub thumbnail_path: Option<String>,
     pub folder_path: String,
     pub created_at: String,

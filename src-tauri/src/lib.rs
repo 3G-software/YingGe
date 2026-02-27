@@ -7,7 +7,7 @@ mod processing;
 mod storage;
 
 use ai::provider::AiProviderManager;
-use tauri::{Emitter, Manager, menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder}};
+use tauri::{Emitter, Manager, menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder}};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -30,8 +30,24 @@ pub fn run() {
 
             // Create File menu
             let import_item = MenuItemBuilder::with_id("import", "导入").build(app)?;
+            let export_library_item = MenuItemBuilder::with_id("export-library", "导出资源库").build(app)?;
+            let import_library_item = MenuItemBuilder::with_id("import-library", "导入资源库").build(app)?;
             let file_menu = SubmenuBuilder::new(app, "文件")
                 .item(&import_item)
+                .separator()
+                .item(&export_library_item)
+                .item(&import_library_item)
+                .build()?;
+
+            // Create Edit menu with standard shortcuts
+            let edit_menu = SubmenuBuilder::new(app, "编辑")
+                .item(&PredefinedMenuItem::undo(app, None)?)
+                .item(&PredefinedMenuItem::redo(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::cut(app, None)?)
+                .item(&PredefinedMenuItem::copy(app, None)?)
+                .item(&PredefinedMenuItem::paste(app, None)?)
+                .item(&PredefinedMenuItem::select_all(app, None)?)
                 .build()?;
 
             // Create Tags menu
@@ -65,15 +81,19 @@ pub fn run() {
             // Create Help menu
             let about_item = MenuItemBuilder::with_id("about", "关于").build(app)?;
             let plugin_dev_guide_item = MenuItemBuilder::with_id("plugin-dev-guide", "插件开发指导").build(app)?;
+            let reset_app_item = MenuItemBuilder::with_id("reset-app", "重置应用程序").build(app)?;
             let help_menu = SubmenuBuilder::new(app, "帮助")
                 .item(&about_item)
                 .item(&plugin_dev_guide_item)
+                .separator()
+                .item(&reset_app_item)
                 .build()?;
 
             // Build and set the menu
             let menu = MenuBuilder::new(app)
                 .item(&app_menu)
                 .item(&file_menu)
+                .item(&edit_menu)
                 .item(&tags_menu)
                 .item(&tools_menu)
                 .item(&plugins_menu)
@@ -125,6 +145,15 @@ pub fn run() {
                     "plugin-dev-guide" => {
                         let _ = window.emit("menu-plugin-dev-guide", ());
                     }
+                    "reset-app" => {
+                        let _ = window.emit("menu-reset-app", ());
+                    }
+                    "export-library" => {
+                        let _ = window.emit("menu-export-library", ());
+                    }
+                    "import-library" => {
+                        let _ = window.emit("menu-import-library", ());
+                    }
                     _ => {}
                 }
             });
@@ -166,6 +195,7 @@ pub fn run() {
             commands::asset::update_description,
             commands::asset::delete_assets,
             commands::asset::move_assets,
+            commands::asset::duplicate_assets,
             commands::asset::get_folders,
             commands::asset::get_asset_file_path,
             commands::asset::get_thumbnail_path,
@@ -201,6 +231,12 @@ pub fn run() {
             commands::processing::save_edited_image,
             // Menu commands
             commands::menu::update_menu_language,
+            // Library IO commands
+            commands::library_io::export_library,
+            commands::library_io::export_all_libraries,
+            commands::library_io::check_import_library,
+            commands::library_io::import_library,
+            commands::library_io::reset_application,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

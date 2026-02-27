@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, MouseEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { AssetCard } from "./AssetCard";
 import { AssetContextMenu } from "./AssetContextMenu";
 import type { Asset } from "../../types/asset";
 import { useAppStore } from "../../stores/appStore";
+import { duplicateAssets, moveAssets } from "../../services/tauriBridge";
 
 interface AssetGridProps {
   assets: Asset[];
@@ -13,6 +16,7 @@ interface AssetGridProps {
   onResize: () => void;
   onMergeSpritesheet: () => void;
   onSplitImage: () => void;
+  onCopyImage: () => void;
 }
 
 interface SelectionBox {
@@ -31,15 +35,118 @@ export function AssetGrid({
   onResize,
   onMergeSpritesheet,
   onSplitImage,
+  onCopyImage,
 }: AssetGridProps) {
   const viewMode = useAppStore((s) => s.viewMode);
-  const { selectedAssetIds, setSelectedAssetIds } = useAppStore();
+  const { selectedAssetIds, setSelectedAssetIds, currentFolder } = useAppStore();
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [copiedAssetIds, setCopiedAssetIds] = useState<string[]>([]);
+  const [cutAssetIds, setCutAssetIds] = useState<string[]>([]);
   const gridRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl/Cmd + A: Select all
+      if (modKey && e.key === 'a') {
+        e.preventDefault();
+        const allIds = assets.map(a => a.id);
+        setSelectedAssetIds(allIds);
+        console.log('[AssetGrid] Select all:', allIds.length, 'assets');
+      }
+
+      // Ctrl/Cmd + C: Copy
+      if (modKey && e.key === 'c' && selectedAssetIds.length > 0) {
+        e.preventDefault();
+        setCopiedAssetIds([...selectedAssetIds]);
+        setCutAssetIds([]); // Clear cut when copying
+        console.log('[AssetGrid] Copied:', selectedAssetIds.length, 'assets');
+        // Also copy to system clipboard
+        onCopyImage();
+      }
+
+      // Ctrl/Cmd + X: Cut (for moving)
+      if (modKey && e.key === 'x' && selectedAssetIds.length > 0) {
+        e.preventDefault();
+        setCutAssetIds([...selectedAssetIds]);
+        setCopiedAssetIds([]); // Clear copy when cutting
+        console.log('[AssetGrid] Cut:', selectedAssetIds.length, 'assets');
+      }
+
+      // Ctrl/Cmd + V: Paste (duplicate or move assets)
+      if (modKey && e.key === 'v' && (copiedAssetIds.length > 0 || cutAssetIds.length > 0)) {
+        e.preventDefault();
+
+        if (cutAssetIds.length > 0) {
+          // Move assets (cut + paste)
+          console.log('[AssetGrid] Moving:', cutAssetIds.length, 'assets', 'to folder:', currentFolder);
+          try {
+            await moveAssets(cutAssetIds, currentFolder);
+            console.log('[AssetGrid] Moved:', cutAssetIds.length, 'assets');
+
+            // Refresh queries
+            queryClient.invalidateQueries({ queryKey: ["assets"], refetchType: "all" });
+            queryClient.invalidateQueries({ queryKey: ["folders"], refetchType: "all" });
+            queryClient.invalidateQueries({ queryKey: ["root-assets-count"], refetchType: "all" });
+
+            // Clear cut list and keep selection
+            setCutAssetIds([]);
+          } catch (error) {
+            console.error('[AssetGrid] Failed to move assets:', error);
+            alert(`移动资源失败: ${error}`);
+          }
+        } else if (copiedAssetIds.length > 0) {
+          // Duplicate assets (copy + paste)
+          console.log('[AssetGrid] Pasting:', copiedAssetIds.length, 'assets', 'to folder:', currentFolder);
+          try {
+            const copySuffix = t('asset.copySuffix');
+            const duplicated = await duplicateAssets(copiedAssetIds, copySuffix, currentFolder);
+            console.log('[AssetGrid] Duplicated:', duplicated.length, 'assets');
+
+            // Refresh queries
+            queryClient.invalidateQueries({ queryKey: ["assets"], refetchType: "all" });
+            queryClient.invalidateQueries({ queryKey: ["folders"], refetchType: "all" });
+            queryClient.invalidateQueries({ queryKey: ["root-assets-count"], refetchType: "all" });
+
+            // Select the newly duplicated assets
+            const newIds = duplicated.map(a => a.id);
+            setSelectedAssetIds(newIds);
+          } catch (error) {
+            console.error('[AssetGrid] Failed to duplicate assets:', error);
+            alert(`复制资源失败: ${error}`);
+          }
+        }
+      }
+    };
+
+    // Global dragend listener to ensure flag is always cleared
+    const handleDragEnd = () => {
+      // Don't clear immediately - let drop handlers clear it
+      // Set a longer timeout as fallback
+      setTimeout(() => {
+        if ((window as any).__internalDragInProgress) {
+          (window as any).__internalDragInProgress = false;
+          console.log('[AssetGrid] Global dragend - cleared internal drag flag (timeout fallback)');
+        }
+      }, 1000);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('dragend', handleDragEnd);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('dragend', handleDragEnd);
+    };
+  }, [assets, selectedAssetIds, copiedAssetIds, setSelectedAssetIds, onCopyImage, queryClient]);
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
     // Only start selection on left click and not on a card
@@ -233,6 +340,7 @@ export function AssetGrid({
           onResize={onResize}
           onMergeSpritesheet={onMergeSpritesheet}
           onSplitImage={onSplitImage}
+          onCopyImage={onCopyImage}
         />
       )}
     </div>

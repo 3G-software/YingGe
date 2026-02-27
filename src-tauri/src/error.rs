@@ -17,6 +17,9 @@ pub enum AppError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
+    #[error("Zip error: {0}")]
+    Zip(#[from] zip::result::ZipError),
+
     #[error("Not found: {0}")]
     NotFound(String),
 

@@ -19,7 +19,7 @@ interface AssetDetailProps {
 }
 
 export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: detail, refetch } = useAssetDetail(assetId);
   const renameAsset = useRenameAsset();
   const updateDesc = useUpdateDescription();
@@ -73,7 +73,7 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
   const handleAiTag = async () => {
     setAiLoading(true);
     try {
-      await aiTagAsset(asset.id);
+      await aiTagAsset(asset.id, i18n.language);
       refetch();
     } catch (e) {
       console.error("AI tagging failed:", e);
@@ -225,8 +225,20 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
               </button>
             </div>
           ) : (
-            <div className="text-sm text-text-secondary">
-              {asset.description || "No description"}
+            <div className="text-sm text-text-secondary space-y-1">
+              {/* User description */}
+              {asset.description && (
+                <div>{asset.description}</div>
+              )}
+              {/* AI description in current language */}
+              {!asset.description && (
+                <div className="italic">
+                  {i18n.language === 'zh'
+                    ? (asset.ai_description_zh || asset.ai_description_en || "No description")
+                    : (asset.ai_description_en || asset.ai_description || "No description")
+                  }
+                </div>
+              )}
             </div>
           )}
         </div>

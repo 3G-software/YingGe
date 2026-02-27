@@ -45,6 +45,7 @@ export function useImportAssets() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["assets"], refetchType: "all" });
       await queryClient.invalidateQueries({ queryKey: ["folders"], refetchType: "all" });
+      await queryClient.invalidateQueries({ queryKey: ["root-assets-count"], refetchType: "all" });
     },
   });
 }
@@ -87,6 +88,8 @@ export function useDeleteAssets() {
     mutationFn: (ids: string[]) => api.deleteAssets(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      queryClient.invalidateQueries({ queryKey: ["root-assets-count"] });
       clearSelection();
     },
   });

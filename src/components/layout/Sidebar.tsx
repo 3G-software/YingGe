@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppStore } from "../../stores/appStore";
 import { useFolders, useImportAssets } from "../../hooks/useAssets";
-import { useLibraries, useCreateLibrary } from "../../hooks/useLibrary";
+import { useLibraries } from "../../hooks/useLibrary";
 import type { Library as LibraryType } from "../../types/asset";
 import { ContextMenu, type ContextMenuItem } from "../common/ContextMenu";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import * as api from "../../services/tauriBridge";
+import { CreateLibraryModal } from "../library/CreateLibraryModal";
 
 export function Sidebar() {
   const { t } = useTranslation();
@@ -22,7 +23,6 @@ export function Sidebar() {
   } = useAppStore();
   const { data: libraries } = useLibraries();
   const { data: folders } = useFolders();
-  const createLibrary = useCreateLibrary();
   const importAssets = useImportAssets();
 
   // Query to get total asset count for the entire library (root + all subdirectories)
@@ -40,9 +40,7 @@ export function Sidebar() {
     enabled: !!currentLibrary,
   });
 
-  const [showNewLibrary, setShowNewLibrary] = useState(false);
-  const [newLibName, setNewLibName] = useState("");
-  const [newLibPath, setNewLibPath] = useState("");
+  const [showCreateLibraryModal, setShowCreateLibraryModal] = useState(false);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -99,21 +97,6 @@ export function Sidebar() {
   });
 
   if (!sidebarOpen) return null;
-
-  const handleCreateLibrary = () => {
-    if (newLibName && newLibPath) {
-      createLibrary.mutate(
-        { name: newLibName, rootPath: newLibPath },
-        {
-          onSuccess: () => {
-            setShowNewLibrary(false);
-            setNewLibName("");
-            setNewLibPath("");
-          },
-        }
-      );
-    }
-  };
 
   const handleContextMenu = (e: React.MouseEvent, folderPath?: string) => {
     e.preventDefault();
@@ -251,38 +234,13 @@ export function Sidebar() {
             {t('library.title')}
           </span>
           <button
-            onClick={() => setShowNewLibrary(!showNewLibrary)}
+            onClick={() => setShowCreateLibraryModal(true)}
             className="p-1 rounded hover:bg-bg-tertiary text-text-secondary hover:text-text-primary transition-colors"
             title={t('library.create')}
           >
             <Plus size={14} />
           </button>
         </div>
-        {showNewLibrary && (
-          <div className="mb-2 space-y-2">
-            <input
-              type="text"
-              placeholder={t('library.name')}
-              value={newLibName}
-              onChange={(e) => setNewLibName(e.target.value)}
-              className="w-full px-2 py-1 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
-            />
-            <input
-              type="text"
-              placeholder={t('library.path')}
-              value={newLibPath}
-              onChange={(e) => setNewLibPath(e.target.value)}
-              className="w-full px-2 py-1 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
-            />
-            <button
-              onClick={handleCreateLibrary}
-              disabled={!newLibName || !newLibPath}
-              className="w-full px-2 py-1 text-sm bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 transition-colors"
-            >
-              {t('library.create')}
-            </button>
-          </div>
-        )}
         <select
           value={currentLibrary?.id || ""}
           onChange={(e) => {
@@ -329,6 +287,7 @@ export function Sidebar() {
                 window.location.hash = '#/';
               }
             }}
+            data-folder-path="/"
             className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm rounded transition-colors cursor-pointer ${
               currentFolder === "/"
                 ? "bg-primary/20 text-primary"
@@ -416,6 +375,7 @@ export function Sidebar() {
                         e.stopPropagation();
                         handleContextMenu(e, folder.path);
                       }}
+                      data-folder-path={folder.path}
                       className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 text-sm rounded transition-colors cursor-pointer ${
                         currentFolder === folder.path
                           ? "bg-primary/20 text-primary"
@@ -484,6 +444,12 @@ export function Sidebar() {
           onClose={() => setContextMenu(null)}
         />
       )}
+
+      {/* Create Library Modal */}
+      <CreateLibraryModal
+        open={showCreateLibraryModal}
+        onClose={() => setShowCreateLibraryModal(false)}
+      />
     </aside>
   );
 }

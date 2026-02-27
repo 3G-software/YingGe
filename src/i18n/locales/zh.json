@@ -42,6 +42,7 @@
     "addTag": "添加标签",
     "aiTag": "AI 标签",
     "aiTagging": "AI 标签中...",
+    "copySuffix": " 副本",
     "downloadDescriptor": "下载精灵图描述文件",
     "selectDescriptorFormat": "选择描述文件格式",
     "jsonFormat": "通用 JSON 格式，适用于大多数游戏引擎",
@@ -133,7 +134,8 @@
     "compressImage": "压缩图片",
     "compressImageDesc": "压缩图片体积，支持调整尺寸和质量",
     "resizeImage": "调整尺寸",
-    "resizeImageDesc": "调整图片尺寸，支持保持宽高比"
+    "resizeImageDesc": "调整图片尺寸，支持保持宽高比",
+    "copyImage": "复制图片"
   },
   "compress": {
     "selectAsset": "请先在资源列表中选择图片",
@@ -201,6 +203,33 @@
     "confirmDelete": "确认删除此资源库？",
     "deleteWarning": "此操作将永久删除资源库及其所有文件，无法恢复！"
   },
+  "libraryIO": {
+    "exportLibrary": "导出资源库",
+    "importLibrary": "导入资源库",
+    "exportAll": "导出所有资源库",
+    "selectLibrary": "选择要导出的资源库",
+    "selectZipFile": "选择资源库文件",
+    "targetFolder": "目标文件夹",
+    "selectTargetFolder": "选择目标文件夹",
+    "exporting": "导出中...",
+    "importing": "导入中...",
+    "exportSuccess": "导出成功",
+    "importSuccess": "导入成功",
+    "duplicatesFound": "发现重复文件",
+    "duplicatesMessage": "以下文件已存在，请选择处理方式：",
+    "replaceAll": "全部替换",
+    "skipAll": "全部跳过",
+    "totalAssets": "共 {{count}} 个资源"
+  },
+  "resetApp": {
+    "title": "重置应用程序",
+    "warning": "此操作将删除所有资源库、图片和设置数据，且无法恢复！",
+    "confirm": "确认重置",
+    "inputConfirm": "请输入 \"RESET\" 确认重置",
+    "resetting": "重置中...",
+    "success": "重置成功",
+    "successMessage": "应用程序已重置，请重新启动"
+  },
   "about": {
     "title": "关于",
     "subtitle": "游戏资源管理工具",
@@ -223,7 +252,8 @@
     "success": "移除成功",
     "successMessage": "背景已移除，新图片已添加到资源库",
     "processing": "处理中...",
-    "remove": "移除背景"
+    "remove": "移除背景",
+    "suffix": "_去背景"
   },
   "imageEditor": {
     "title": "图片编辑器",

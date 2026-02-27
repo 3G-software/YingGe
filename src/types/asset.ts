@@ -13,6 +13,8 @@ export interface Asset {
   duration_ms: number | null;
   description: string;
   ai_description: string;
+  ai_description_en: string;
+  ai_description_zh: string;
   thumbnail_path: string | null;
   folder_path: string;
   created_at: string;
@@ -93,4 +95,9 @@ export interface Library {
 export interface SpritesheetResult {
   image_asset: Asset;
   descriptor_content: string;
+}
+
+export interface ImportResult {
+  imported_assets: Asset[];
+  skipped_files: string[];
 }

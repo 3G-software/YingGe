@@ -16,6 +16,7 @@ type Tool = "brush" | "eraser" | "eyedropper";
 export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogProps) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scaledDivRef = useRef<HTMLDivElement>(null);
   const [tool, setTool] = useState<Tool>("brush");
   const [brushColor, setBrushColor] = useState("#000000");
   const [brushSize, setBrushSize] = useState(5);
@@ -30,6 +31,7 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
   const queryClient = useQueryClient();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+  const [isOverCanvas, setIsOverCanvas] = useState(false);
 
   // Load image when dialog opens
   useEffect(() => {
@@ -99,13 +101,16 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
     if (!canvas) return null;
 
     const rect = canvas.getBoundingClientRect();
+    // rect.width/height already includes the CSS scale transform
+    // canvas.width/height is the actual pixel size of the canvas
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    };
+    // Calculate position relative to canvas, accounting for scroll
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    return { x, y };
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -132,13 +137,29 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    // Update cursor position for custom cursor (relative to container, not canvas)
+    // Update cursor position relative to the container (including scroll offset)
     const container = canvasContainerRef.current;
-    if (container) {
-      const rect = container.getBoundingClientRect();
+    const canvas = canvasRef.current;
+
+    if (container && canvas) {
+      const containerRect = container.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+
+      // Calculate cursor position relative to container, accounting for scroll
+      const cursorX = e.clientX - containerRect.left + container.scrollLeft;
+      const cursorY = e.clientY - containerRect.top + container.scrollTop;
+
+      // Check if cursor is actually over the canvas (considering zoom)
+      const isOver =
+        e.clientX >= canvasRect.left &&
+        e.clientX <= canvasRect.right &&
+        e.clientY >= canvasRect.top &&
+        e.clientY <= canvasRect.bottom;
+
+      setIsOverCanvas(isOver);
       setCursorPos({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: cursorX,
+        y: cursorY,
       });
     }
 
@@ -151,6 +172,7 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
   const handleMouseLeave = () => {
     setIsDrawing(false);
     setCursorPos(null);
+    setIsOverCanvas(false);
   };
 
   const draw = (x: number, y: number) => {
@@ -160,8 +182,9 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.beginPath();
-    ctx.arc(x, y, brushSize / zoom, 0, Math.PI * 2);
+    // Draw a square centered at (x, y)
+    // The square's top-left corner is at (x - brushSize/2, y - brushSize/2)
+    const halfSize = brushSize / 2;
 
     if (tool === "eraser") {
       ctx.globalCompositeOperation = "destination-out";
@@ -171,7 +194,7 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
       ctx.fillStyle = brushColor;
     }
 
-    ctx.fill();
+    ctx.fillRect(x - halfSize, y - halfSize, brushSize, brushSize);
   };
 
   const handleZoomIn = () => {
@@ -376,8 +399,13 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
             ref={canvasContainerRef}
             className="flex-1 overflow-auto bg-bg-tertiary/30 flex items-center justify-center p-4"
             style={{ position: "relative" }}
+            onMouseLeave={() => {
+              setCursorPos(null);
+              setIsOverCanvas(false);
+            }}
           >
             <div
+              ref={scaledDivRef}
               style={{
                 transform: `scale(${zoom})`,
                 transformOrigin: "center",
@@ -398,7 +426,7 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
               />
             </div>
             {/* Custom cursor - outside scaled div so it doesn't scale */}
-            {cursorPos && (
+            {cursorPos && isOverCanvas && (
               <>
                 {tool === "eyedropper" ? (
                   // Eyedropper icon cursor
@@ -414,7 +442,7 @@ export function ImageEditorDialog({ open, assetId, onClose }: ImageEditorDialogP
                     <Pipette size={32} color="#3b82f6" strokeWidth={2.5} />
                   </div>
                 ) : (
-                  // Brush/Eraser square cursor
+                  // Brush/Eraser square cursor - size matches actual brush size on canvas
                   <div
                     style={{
                       position: "absolute",

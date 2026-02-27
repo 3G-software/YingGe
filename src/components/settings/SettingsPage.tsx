@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Save, TestTube, Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import type { AiConfigInput } from "../../types/asset";
 import {
   getAiConfig,
@@ -68,48 +67,6 @@ export function SettingsPage() {
     }
   };
 
-  const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>, field: keyof AiConfigInput) => {
-    // Handle Cmd+A / Ctrl+A (Select All)
-    if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
-      e.preventDefault();
-      e.stopPropagation();
-      // Explicitly select all text
-      const input = e.currentTarget;
-      input.select();
-      console.log('已执行全选操作');
-      return;
-    }
-
-    // Handle Cmd+V / Ctrl+V (Paste)
-    if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
-      e.stopPropagation();
-      e.preventDefault();
-      try {
-        const text = await readText();
-        if (text) {
-          setConfig({ ...config, [field]: text });
-          console.log(`已粘贴到 ${field}:`, text.substring(0, 20));
-        }
-      } catch (err) {
-        console.error('粘贴失败:', err);
-        // 如果 Tauri API 失败，让浏览器处理
-        e.currentTarget.focus();
-      }
-    }
-
-    // Handle Cmd+C / Ctrl+C (Copy) - allow default
-    if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
-      e.stopPropagation();
-      return;
-    }
-
-    // Handle Cmd+X / Ctrl+X (Cut) - allow default
-    if ((e.metaKey || e.ctrlKey) && e.key === 'x') {
-      e.stopPropagation();
-      return;
-    }
-  };
-
   return (
     <div className="flex-1 overflow-y-auto max-w-2xl">
       <h1 className="text-xl font-semibold mb-6">{t('settings.title')}</h1>
@@ -164,7 +121,6 @@ export function SettingsPage() {
               onChange={(e) =>
                 setConfig({ ...config, api_endpoint: e.target.value })
               }
-              onKeyDown={(e) => handleInputKeyDown(e, 'api_endpoint')}
               placeholder="https://api.openai.com/v1/chat/completions"
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             />
@@ -183,7 +139,6 @@ export function SettingsPage() {
               onChange={(e) =>
                 setConfig({ ...config, api_key: e.target.value })
               }
-              onKeyDown={(e) => handleInputKeyDown(e, 'api_key')}
               autoComplete="off"
               placeholder="sk-..."
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
@@ -200,7 +155,6 @@ export function SettingsPage() {
               onChange={(e) =>
                 setConfig({ ...config, model_id: e.target.value })
               }
-              onKeyDown={(e) => handleInputKeyDown(e, 'model_id')}
               placeholder="gpt-4o"
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             />
@@ -216,10 +170,12 @@ export function SettingsPage() {
               onChange={(e) =>
                 setConfig({ ...config, embedding_model: e.target.value })
               }
-              onKeyDown={(e) => handleInputKeyDown(e, 'embedding_model')}
               placeholder="text-embedding-3-small"
               className="w-full px-3 py-2 text-sm bg-bg rounded border border-border focus:border-primary focus:outline-none"
             />
+            <p className="mt-1 text-xs text-text-secondary">
+              ⚠️ Must be a text embedding model, NOT a chat model. Examples: text-embedding-3-small (OpenAI), doubao-embedding (Volcengine)
+            </p>
           </div>
 
           <div className="flex gap-3">

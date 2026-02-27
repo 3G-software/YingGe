@@ -45,6 +45,26 @@ export function AssetCard({ asset, onClick }: AssetCardProps) {
     }
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    // If dragging a selected asset, drag all selected assets
+    // If dragging an unselected asset, select it first
+    const assetsToDrag = isSelected ? selectedAssetIds : [asset.id];
+
+    if (!isSelected) {
+      setSelectedAssetIds([asset.id]);
+    }
+
+    // Store asset IDs in global variable for Tauri drag system to access
+    (window as any).__draggedAssetIds = assetsToDrag;
+  };
+
+  const handleDragEnd = () => {
+    // Clear the dragged asset IDs after a short delay
+    setTimeout(() => {
+      (window as any).__draggedAssetIds = null;
+    }, 500);
+  };
+
   const fileIcon = () => {
     switch (asset.file_type) {
       case "image":
@@ -65,6 +85,9 @@ export function AssetCard({ asset, onClick }: AssetCardProps) {
   return (
     <div
       onClick={handleClick}
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={`group relative rounded-lg border transition-all cursor-pointer overflow-hidden ${
         isSelected
           ? "border-primary bg-primary/10"

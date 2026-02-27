@@ -42,6 +42,7 @@
     "addTag": "Add Tag",
     "aiTag": "AI Tag",
     "aiTagging": "AI Tagging...",
+    "copySuffix": " copy",
     "downloadDescriptor": "Download Spritesheet Descriptor",
     "selectDescriptorFormat": "Select Descriptor Format",
     "jsonFormat": "Generic JSON format, compatible with most game engines",
@@ -133,7 +134,8 @@
     "compressImage": "Compress Image",
     "compressImageDesc": "Compress image size by adjusting dimensions and quality",
     "resizeImage": "Resize Image",
-    "resizeImageDesc": "Resize image dimensions with aspect ratio support"
+    "resizeImageDesc": "Resize image dimensions with aspect ratio support",
+    "copyImage": "Copy Image"
   },
   "compress": {
     "selectAsset": "Please select image(s) from the asset list first",
@@ -201,6 +203,33 @@
     "confirmDelete": "Delete this library?",
     "deleteWarning": "This will permanently delete the library and all its files. This cannot be undone!"
   },
+  "libraryIO": {
+    "exportLibrary": "Export Library",
+    "importLibrary": "Import Library",
+    "exportAll": "Export All Libraries",
+    "selectLibrary": "Select library to export",
+    "selectZipFile": "Select library file",
+    "targetFolder": "Target Folder",
+    "selectTargetFolder": "Select target folder",
+    "exporting": "Exporting...",
+    "importing": "Importing...",
+    "exportSuccess": "Export Successful",
+    "importSuccess": "Import Successful",
+    "duplicatesFound": "Duplicates Found",
+    "duplicatesMessage": "The following files already exist. Choose how to handle them:",
+    "replaceAll": "Replace All",
+    "skipAll": "Skip All",
+    "totalAssets": "{{count}} assets total"
+  },
+  "resetApp": {
+    "title": "Reset Application",
+    "warning": "This will delete all libraries, images, and settings. This cannot be undone!",
+    "confirm": "Confirm Reset",
+    "inputConfirm": "Type \"RESET\" to confirm",
+    "resetting": "Resetting...",
+    "success": "Reset Successful",
+    "successMessage": "Application has been reset. Please restart."
+  },
   "about": {
     "title": "About",
     "subtitle": "Game Asset Management Tool",
@@ -223,7 +252,8 @@
     "success": "Removal Successful",
     "successMessage": "Background removed, new image added to library",
     "processing": "Processing...",
-    "remove": "Remove Background"
+    "remove": "Remove Background",
+    "suffix": "_nobg"
   },
   "imageEditor": {
     "title": "Image Editor",

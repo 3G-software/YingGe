@@ -7,6 +7,7 @@ import { aiTagAsset, getAiConfig } from "../../services/tauriBridge";
 import { useTranslation } from "react-i18next";
 import { AiConfigHintDialog } from "../common/AiConfigHintDialog";
 import type { AiConfig } from "../../types/asset";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AssetImportProps {
   open: boolean;
@@ -30,7 +31,8 @@ function isAiConfigValid(config: AiConfig | null): boolean {
 }
 
 export function AssetImport({ open: isOpen, onClose, onOpenSettings }: AssetImportProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const currentLibrary = useAppStore((s) => s.currentLibrary);
   const currentFolder = useAppStore((s) => s.currentFolder);
   const importAssets = useImportAssets();
@@ -61,13 +63,23 @@ export function AssetImport({ open: isOpen, onClose, onOpenSettings }: AssetImpo
 
     setImporting(true);
     try {
-      const importedAssets = await importAssets.mutateAsync({
+      const result = await importAssets.mutateAsync({
         libraryId: currentLibrary.id,
         filePaths: paths,
         folderPath: currentFolder,
       });
 
-      console.log(`[AssetImport] Import completed, ${importedAssets.length} assets imported`);
+      const importedAssets = result.imported_assets;
+      const skippedFiles = result.skipped_files;
+
+      console.log(`[AssetImport] Import completed, ${importedAssets.length} assets imported, ${skippedFiles.length} files skipped`);
+
+      // Show notification for skipped files
+      if (skippedFiles.length > 0) {
+        const fileList = skippedFiles.slice(0, 5).join(', ');
+        const more = skippedFiles.length > 5 ? ` and ${skippedFiles.length - 5} more` : '';
+        alert(`Skipped ${skippedFiles.length} unsupported file(s): ${fileList}${more}`);
+      }
 
       // Close dialog first, then do AI tagging in background
       onClose();
@@ -86,8 +98,10 @@ export function AssetImport({ open: isOpen, onClose, onOpenSettings }: AssetImpo
           for (const asset of imageAssets) {
             try {
               console.log(`[AssetImport] Starting AI tagging for asset: ${asset.id}`);
-              await aiTagAsset(asset.id);
+              await aiTagAsset(asset.id, i18n.language);
               console.log(`[AssetImport] AI tagging completed for asset: ${asset.id}`);
+              // Invalidate asset detail query to refresh UI if this asset is currently selected
+              queryClient.invalidateQueries({ queryKey: ['asset-detail', asset.id] });
             } catch (error) {
               console.error(`[AssetImport] AI tagging failed for asset ${asset.id}:`, error);
               // Check if it's a connection error
@@ -105,7 +119,7 @@ export function AssetImport({ open: isOpen, onClose, onOpenSettings }: AssetImpo
       console.error("Import failed:", e);
       setImporting(false);
     }
-  }, [currentLibrary, currentFolder, importAssets, onClose, aiConfigValid]);
+  }, [currentLibrary, currentFolder, importAssets, onClose, aiConfigValid, queryClient, i18n.language]);
 
   const handleDontShowAgain = useCallback(() => {
     if (aiHintMode === "not_configured") {

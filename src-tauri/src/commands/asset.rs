@@ -10,6 +10,12 @@ use crate::db::{
 use crate::error::AppError;
 use crate::storage::{file_ops, thumbnail};
 
+#[derive(serde::Serialize)]
+pub struct ImportResult {
+    pub imported_assets: Vec<Asset>,
+    pub skipped_files: Vec<String>,
+}
+
 /// Supported file extensions for import
 const SUPPORTED_EXTENSIONS: &[&str] = &[
     "png", "jpg", "jpeg", "gif", "bmp", "webp", "svg", "tiff",
@@ -30,9 +36,7 @@ fn collect_files(path: &std::path::Path) -> Vec<std::path::PathBuf> {
     let mut files = Vec::new();
 
     if path.is_file() {
-        if is_supported_file(path) {
-            files.push(path.to_path_buf());
-        }
+        files.push(path.to_path_buf());
     } else if path.is_dir() {
         if let Ok(entries) = std::fs::read_dir(path) {
             for entry in entries.flatten() {
@@ -51,7 +55,7 @@ pub async fn import_assets(
     file_paths: Vec<String>,
     folder_path: String,
     pool: State<'_, SqlitePool>,
-) -> Result<Vec<Asset>, AppError> {
+) -> Result<ImportResult, AppError> {
     // Debug logging
     tracing::info!("import_assets called with {} paths", file_paths.len());
     for (i, path) in file_paths.iter().enumerate() {
@@ -74,9 +78,22 @@ pub async fn import_assets(
     tracing::info!("Total files to import: {}", all_files.len());
 
     let mut imported = Vec::new();
+    let mut skipped = Vec::new();
 
     for source in &all_files {
         if !source.exists() {
+            continue;
+        }
+
+        // Skip unsupported files
+        if !is_supported_file(source) {
+            let file_name = source
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+            tracing::info!("Skipping unsupported file: {}", file_name);
+            skipped.push(file_name);
             continue;
         }
 
@@ -135,6 +152,8 @@ pub async fn import_assets(
             duration_ms: None,
             description: String::new(),
             ai_description: String::new(),
+            ai_description_en: String::new(),
+            ai_description_zh: String::new(),
             thumbnail_path,
             folder_path: folder,
             created_at: String::new(),
@@ -146,7 +165,12 @@ pub async fn import_assets(
         imported.push(saved);
     }
 
-    Ok(imported)
+    tracing::info!("Import completed: {} imported, {} skipped", imported.len(), skipped.len());
+
+    Ok(ImportResult {
+        imported_assets: imported,
+        skipped_files: skipped,
+    })
 }
 
 #[tauri::command]
@@ -235,6 +259,119 @@ pub async fn delete_assets(
     // Delete from database
     queries::delete_assets(&pool, &ids).await?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn duplicate_assets(
+    ids: Vec<String>,
+    copy_suffix: String,
+    target_folder: Option<String>,
+    pool: State<'_, SqlitePool>,
+) -> Result<Vec<Asset>, AppError> {
+    let mut duplicated_assets = Vec::new();
+
+    for id in ids {
+        // Get the original asset
+        let original = queries::get_asset(&pool, &id).await?;
+        let library = queries::get_library(&pool, &original.library_id).await?;
+        let library_root = std::path::PathBuf::from(&library.root_path);
+
+        // Generate new ID and file name
+        let new_id = Uuid::new_v4().to_string();
+        let original_path = library_root.join(&original.relative_path);
+
+        // Create new file name with copy suffix
+        let file_stem = std::path::Path::new(&original.file_name)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("file");
+        let extension = std::path::Path::new(&original.file_name)
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("");
+
+        let new_file_name = if extension.is_empty() {
+            format!("{}{}", file_stem, copy_suffix)
+        } else {
+            format!("{}{}.{}", file_stem, copy_suffix, extension)
+        };
+
+        // Calculate new relative path based on target folder
+        let new_relative_path = if let Some(ref target) = target_folder {
+            // Use target folder if provided
+            if target.is_empty() || target == "/" {
+                new_file_name.clone()
+            } else {
+                format!("{}/{}", target.trim_start_matches('/'), new_file_name)
+            }
+        } else {
+            // Use original folder if no target specified
+            let parent_dir = std::path::Path::new(&original.relative_path)
+                .parent()
+                .and_then(|p| p.to_str())
+                .unwrap_or("");
+            if parent_dir.is_empty() {
+                new_file_name.clone()
+            } else {
+                format!("{}/{}", parent_dir, new_file_name)
+            }
+        };
+
+        let new_path = library_root.join(&new_relative_path);
+
+        // Ensure target directory exists
+        if let Some(parent) = new_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        // Copy the file
+        std::fs::copy(&original_path, &new_path)?;
+
+        // Calculate file hash and size
+        let file_hash = file_ops::compute_file_hash(&new_path)?;
+        let file_size = std::fs::metadata(&new_path)?.len() as i64;
+
+        // Generate thumbnail
+        let thumb_path = thumbnail::generate_thumbnail(&new_path, &library_root, &new_id).ok();
+
+        // Create new asset record
+        let new_asset = Asset {
+            id: new_id.clone(),
+            library_id: original.library_id.clone(),
+            file_name: new_file_name,
+            original_name: original.original_name.clone(),
+            relative_path: new_relative_path,
+            file_type: original.file_type.clone(),
+            mime_type: original.mime_type.clone(),
+            file_size,
+            file_hash,
+            width: original.width,
+            height: original.height,
+            duration_ms: original.duration_ms,
+            description: original.description.clone(),
+            ai_description: original.ai_description.clone(),
+            ai_description_en: String::new(),
+            ai_description_zh: String::new(),
+            thumbnail_path: thumb_path,
+            folder_path: original.folder_path.clone(),
+            created_at: String::new(),
+            updated_at: String::new(),
+            imported_at: String::new(),
+        };
+
+        queries::insert_asset(&pool, &new_asset).await?;
+
+        // Copy tags
+        let tags = queries::get_asset_tags(&pool, &id).await?;
+        if !tags.is_empty() {
+            let tag_ids: Vec<String> = tags.iter().map(|t| t.id.clone()).collect();
+            queries::assign_tags(&pool, &new_id, &tag_ids).await?;
+        }
+
+        duplicated_assets.push(new_asset);
+    }
+
+    Ok(duplicated_assets)
 }
 
 #[tauri::command]

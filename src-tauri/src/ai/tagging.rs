@@ -9,6 +9,7 @@ use crate::processing::compress;
 pub async fn analyze_image_file(
     path: &Path,
     ai_manager: &AiProviderManager,
+    language: &str,
 ) -> Result<AnalysisResult, AppError> {
     tracing::info!("Reading image file: {:?}", path);
     let provider = ai_manager.get_provider().await?;
@@ -29,8 +30,8 @@ pub async fn analyze_image_file(
         (1.0 - (compressed_size as f64 / original_size as f64)) * 100.0
     );
 
-    tracing::info!("Sending compressed image to AI provider for analysis...");
-    let result = provider.analyze_image(&base64_str, mime_type).await?;
+    tracing::info!("Sending compressed image to AI provider for analysis (language: {})...", language);
+    let result = provider.analyze_image(&base64_str, mime_type, language).await?;
     tracing::info!("AI provider returned analysis result");
 
     Ok(result)
