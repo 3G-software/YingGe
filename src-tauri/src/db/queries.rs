@@ -46,8 +46,8 @@ pub async fn delete_library(pool: &SqlitePool, id: &str) -> Result<(), sqlx::Err
 
 pub async fn insert_asset(pool: &SqlitePool, asset: &Asset) -> Result<Asset, sqlx::Error> {
     sqlx::query_as::<_, Asset>(
-        "INSERT INTO assets (id, library_id, file_name, original_name, relative_path, file_type, mime_type, file_size, file_hash, width, height, duration_ms, description, ai_description, thumbnail_path, folder_path)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "INSERT INTO assets (id, library_id, file_name, original_name, relative_path, file_type, mime_type, file_size, file_hash, width, height, duration_ms, description, ai_description, ai_description_en, ai_description_zh, thumbnail_path, folder_path)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING *"
     )
     .bind(&asset.id)
@@ -64,6 +64,8 @@ pub async fn insert_asset(pool: &SqlitePool, asset: &Asset) -> Result<Asset, sql
     .bind(asset.duration_ms)
     .bind(&asset.description)
     .bind(&asset.ai_description)
+    .bind(&asset.ai_description_en)
+    .bind(&asset.ai_description_zh)
     .bind(&asset.thumbnail_path)
     .bind(&asset.folder_path)
     .fetch_one(pool)
@@ -167,6 +169,51 @@ pub async fn update_asset_description(
         .execute(pool)
         .await?;
     Ok(())
+}
+
+pub async fn update_asset_ai_descriptions(
+    pool: &SqlitePool,
+    id: &str,
+    description_en: &str,
+    description_zh: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE assets SET ai_description_en = ?, ai_description_zh = ?, ai_description = ?, updated_at = datetime('now') WHERE id = ?"
+    )
+        .bind(description_en)
+        .bind(description_zh)
+        .bind(description_en) // Keep ai_description as English for backward compatibility
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn update_asset(pool: &SqlitePool, asset: &Asset) -> Result<Asset, sqlx::Error> {
+    sqlx::query(
+        r#"UPDATE assets SET
+            file_name = ?,
+            mime_type = ?,
+            file_size = ?,
+            file_hash = ?,
+            width = ?,
+            height = ?,
+            thumbnail_path = ?,
+            updated_at = datetime('now')
+        WHERE id = ?"#,
+    )
+    .bind(&asset.file_name)
+    .bind(&asset.mime_type)
+    .bind(asset.file_size)
+    .bind(&asset.file_hash)
+    .bind(asset.width)
+    .bind(asset.height)
+    .bind(&asset.thumbnail_path)
+    .bind(&asset.id)
+    .execute(pool)
+    .await?;
+
+    get_asset(pool, &asset.id).await
 }
 
 pub async fn delete_assets(pool: &SqlitePool, ids: &[String]) -> Result<(), sqlx::Error> {

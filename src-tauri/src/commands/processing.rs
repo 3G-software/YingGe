@@ -9,6 +9,7 @@ use crate::processing::{background, compress, descriptor, spritesheet};
 #[tauri::command]
 pub async fn remove_background(
     asset_id: String,
+    suffix: String, // localized suffix like "_nobg" or "_去背景"
     pool: State<'_, SqlitePool>,
 ) -> Result<Asset, AppError> {
     let asset = queries::get_asset(&pool, &asset_id).await?;
@@ -17,15 +18,28 @@ pub async fn remove_background(
 
     let result_img = background::remove_background_smart(&source_path)?;
 
-    // Save as new asset in library root
+    // Save as new asset in same folder as original
     let new_id = Uuid::new_v4().to_string();
     let base_name = asset.file_name.rsplit('.').nth(1).unwrap_or(&asset.file_name);
-    let output_name = format!("{}_nobg.png", base_name);
+    let output_name = format!("{}{}.png", base_name, suffix);
     let library_root = std::path::Path::new(&library.root_path);
-    let output_path = library_root.join(&output_name);
+
+    // Save to same folder as original, or library root if no folder
+    let output_dir = if asset.folder_path.is_empty() || asset.folder_path == "/" {
+        library_root.to_path_buf()
+    } else {
+        library_root.join(&asset.folder_path)
+    };
+    std::fs::create_dir_all(&output_dir)?;
+
+    let output_path = output_dir.join(&output_name);
     result_img.save(&output_path)?;
 
-    let relative_path = output_name.clone();
+    let relative_path = if asset.folder_path.is_empty() || asset.folder_path == "/" {
+        output_name.clone()
+    } else {
+        format!("{}/{}", asset.folder_path, output_name)
+    };
 
     let thumb_path = crate::storage::thumbnail::generate_thumbnail(
         &output_path,
@@ -39,7 +53,7 @@ pub async fn remove_background(
     let file_hash = crate::storage::file_ops::compute_file_hash(&output_path)?;
 
     let new_asset = Asset {
-        id: new_id,
+        id: new_id.clone(),
         library_id: asset.library_id.clone(),
         file_name: output_name,
         original_name: asset.original_name.clone(),
@@ -51,8 +65,10 @@ pub async fn remove_background(
         width: Some(w),
         height: Some(h),
         duration_ms: None,
-        description: format!("Background removed from {}", asset.file_name),
-        ai_description: String::new(),
+        description: asset.description.clone(),
+        ai_description: asset.ai_description.clone(),
+        ai_description_en: asset.ai_description_en.clone(),
+        ai_description_zh: asset.ai_description_zh.clone(),
         thumbnail_path: thumb_path,
         folder_path: asset.folder_path.clone(),
         created_at: String::new(),
@@ -61,6 +77,14 @@ pub async fn remove_background(
     };
 
     let saved = queries::insert_asset(&pool, &new_asset).await?;
+
+    // Copy tags from original asset
+    let original_tags = queries::get_asset_tags(&pool, &asset_id).await?;
+    if !original_tags.is_empty() {
+        let tag_ids: Vec<String> = original_tags.iter().map(|t| t.id.clone()).collect();
+        queries::assign_tags(&pool, &new_id, &tag_ids).await?;
+    }
+
     Ok(saved)
 }
 
@@ -147,6 +171,8 @@ pub async fn merge_spritesheet(
         duration_ms: None,
         description: format!("Sprite sheet with {} frames", info.frames.len()),
         ai_description: String::new(),
+        ai_description_en: String::new(),
+        ai_description_zh: String::new(),
         thumbnail_path: thumb_path,
         folder_path: first_asset.folder_path.clone(),
         created_at: String::new(),
@@ -301,6 +327,8 @@ pub async fn split_image(
             duration_ms: None,
             description: format!("Split from {} (part {})", asset.file_name, i + 1),
             ai_description: String::new(),
+            ai_description_en: String::new(),
+            ai_description_zh: String::new(),
             thumbnail_path: thumb_path,
             folder_path: asset.folder_path.clone(),
             created_at: String::new(),
@@ -430,6 +458,8 @@ pub async fn compress_image(
         duration_ms: None,
         description: asset.description.clone(),
         ai_description: asset.ai_description.clone(),
+        ai_description_en: asset.ai_description_en.clone(),
+        ai_description_zh: asset.ai_description_zh.clone(),
         thumbnail_path: thumb_path,
         folder_path: asset.folder_path.clone(),
         created_at: String::new(),
@@ -533,6 +563,8 @@ pub async fn merge_spritesheet_with_size(
             if enable_compression { " (compressed)" } else { "" }
         ),
         ai_description: String::new(),
+        ai_description_en: String::new(),
+        ai_description_zh: String::new(),
         thumbnail_path: thumb_path,
         folder_path: first_asset.folder_path.clone(),
         created_at: String::new(),
@@ -613,6 +645,8 @@ pub async fn resize_image(
         duration_ms: None,
         description: asset.description.clone(),
         ai_description: asset.ai_description.clone(),
+        ai_description_en: asset.ai_description_en.clone(),
+        ai_description_zh: asset.ai_description_zh.clone(),
         thumbnail_path: thumb_path,
         folder_path: asset.folder_path.clone(),
         created_at: String::new(),
@@ -634,7 +668,7 @@ pub async fn resize_image(
     Ok(saved)
 }
 
-/// Save edited image from base64 data
+/// Save edited image - replaces the original image
 #[tauri::command]
 pub async fn save_edited_image(
     asset_id: String,
@@ -655,66 +689,53 @@ pub async fn save_edited_image(
     // Load image to get dimensions
     let img = image::load_from_memory(&image_bytes)?;
 
-    // Generate output filename
-    let base_name = asset.file_name.rsplit('.').nth(1).unwrap_or(&asset.file_name);
-    let output_name = format!("{}_edited.png", base_name);
+    // Get the original file path
+    let output_path = library_root.join(&asset.relative_path);
 
-    // Save to same folder as original, or library root if no folder
-    let new_id = Uuid::new_v4().to_string();
-    let output_dir = if asset.folder_path.is_empty() || asset.folder_path == "/" {
-        library_root.to_path_buf()
-    } else {
-        library_root.join(&asset.folder_path)
-    };
-    std::fs::create_dir_all(&output_dir)?;
+    // Ensure the directory exists
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
 
-    let output_path = output_dir.join(&output_name);
+    // Overwrite the original file
     std::fs::write(&output_path, &image_bytes)?;
 
-    let relative_path = if asset.folder_path.is_empty() || asset.folder_path == "/" {
-        output_name.clone()
-    } else {
-        format!("{}/{}", asset.folder_path, output_name)
-    };
-
+    // Regenerate thumbnail
     let thumb_path =
-        crate::storage::thumbnail::generate_thumbnail(&output_path, library_root, &new_id).ok();
+        crate::storage::thumbnail::generate_thumbnail(&output_path, library_root, &asset_id).ok();
 
     let file_size = image_bytes.len() as i64;
     let file_hash = crate::storage::file_ops::compute_file_hash(&output_path)?;
 
-    let new_asset = Asset {
-        id: new_id.clone(),
+    // Update the existing asset record
+    let updated_asset = Asset {
+        id: asset.id.clone(),
         library_id: asset.library_id.clone(),
-        file_name: output_name,
+        file_name: asset.file_name.clone(),
         original_name: asset.original_name.clone(),
-        relative_path,
-        file_type: "image".to_string(),
+        relative_path: asset.relative_path.clone(),
+        file_type: asset.file_type.clone(),
         mime_type: "image/png".to_string(),
         file_size,
         file_hash,
         width: Some(img.width() as i32),
         height: Some(img.height() as i32),
         duration_ms: None,
-        description: format!("Edited from {}", asset.file_name),
-        ai_description: String::new(),
+        description: asset.description.clone(),
+        ai_description: asset.ai_description.clone(),
+        ai_description_en: asset.ai_description_en.clone(),
+        ai_description_zh: asset.ai_description_zh.clone(),
         thumbnail_path: thumb_path,
         folder_path: asset.folder_path.clone(),
-        created_at: String::new(),
-        updated_at: String::new(),
-        imported_at: String::new(),
+        created_at: asset.created_at.clone(),
+        updated_at: String::new(), // Will be set by database
+        imported_at: asset.imported_at.clone(),
     };
 
-    let saved = queries::insert_asset(&pool, &new_asset).await?;
+    // Update the asset in database
+    let saved = queries::update_asset(&pool, &updated_asset).await?;
 
-    // Copy tags from original asset
-    let original_tags = queries::get_asset_tags(&pool, &asset_id).await?;
-    if !original_tags.is_empty() {
-        let tag_ids: Vec<String> = original_tags.iter().map(|t| t.id.clone()).collect();
-        queries::assign_tags(&pool, &new_id, &tag_ids).await?;
-    }
-
-    tracing::info!("Image edited and saved: {}", saved.file_name);
+    tracing::info!("Image edited and saved (replaced original): {}", saved.file_name);
 
     Ok(saved)
 }

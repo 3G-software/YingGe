@@ -13,6 +13,7 @@ interface AssetGridProps {
   onResize: () => void;
   onMergeSpritesheet: () => void;
   onSplitImage: () => void;
+  onCopyImage: () => void;
 }
 
 interface SelectionBox {
@@ -31,6 +32,7 @@ export function AssetGrid({
   onResize,
   onMergeSpritesheet,
   onSplitImage,
+  onCopyImage,
 }: AssetGridProps) {
   const viewMode = useAppStore((s) => s.viewMode);
   const { selectedAssetIds, setSelectedAssetIds } = useAppStore();
@@ -233,6 +235,7 @@ export function AssetGrid({
           onResize={onResize}
           onMergeSpritesheet={onMergeSpritesheet}
           onSplitImage={onSplitImage}
+          onCopyImage={onCopyImage}
         />
       )}
     </div>

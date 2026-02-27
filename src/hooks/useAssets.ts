@@ -87,6 +87,8 @@ export function useDeleteAssets() {
     mutationFn: (ids: string[]) => api.deleteAssets(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      queryClient.invalidateQueries({ queryKey: ["root-assets-count"] });
       clearSelection();
     },
   });

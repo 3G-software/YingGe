@@ -135,6 +135,8 @@ pub async fn import_assets(
             duration_ms: None,
             description: String::new(),
             ai_description: String::new(),
+            ai_description_en: String::new(),
+            ai_description_zh: String::new(),
             thumbnail_path,
             folder_path: folder,
             created_at: String::new(),

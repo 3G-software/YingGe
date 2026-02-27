@@ -28,7 +28,8 @@ export function RemoveBackgroundDialog({ open, assetId, onClose }: RemoveBackgro
     setResult(null);
 
     try {
-      await removeBackground(assetId);
+      const suffix = t("removeBackground.suffix");
+      await removeBackground(assetId, suffix);
 
       setResult({
         success: true,

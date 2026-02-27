@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { writeImage } from "@tauri-apps/plugin-clipboard-manager";
+import { readFile } from "@tauri-apps/plugin-fs";
 import { MainLayout } from "./components/layout/MainLayout";
 import { TopBar } from "./components/layout/TopBar";
 import { AssetGrid } from "./components/asset/AssetGrid";
@@ -18,10 +20,12 @@ import { ImageEditorDialog } from "./components/processing/ImageEditorDialog";
 import { CreateLibraryModal } from "./components/library/CreateLibraryModal";
 import { LibraryManagementDialog } from "./components/library/LibraryManagementDialog";
 import { AboutDialog } from "./components/common/AboutDialog";
+import { ResetAppDialog } from "./components/common/ResetAppDialog";
 import { useAssets } from "./hooks/useAssets";
 import { useLibraries } from "./hooks/useLibrary";
 import { useAppStore } from "./stores/appStore";
 import { useKeywordSearch, useSemanticSearch } from "./hooks/useSearch";
+import { getAssetFilePath } from "./services/tauriBridge";
 import type { Asset } from "./types/asset";
 
 const queryClient = new QueryClient({
@@ -45,6 +49,9 @@ function AppContent() {
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [showLibraryMgmt, setShowLibraryMgmt] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showResetApp, setShowResetApp] = useState(false);
+  const [_showExportLibrary, setShowExportLibrary] = useState(false);
+  const [_showImportLibrary, setShowImportLibrary] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Asset[] | null>(null);
 
@@ -94,6 +101,9 @@ function AppContent() {
     let unlistenLibraryMgmt: (() => void) | undefined;
     let unlistenAbout: (() => void) | undefined;
     let unlistenPluginDevGuide: (() => void) | undefined;
+    let unlistenResetApp: (() => void) | undefined;
+    let unlistenExportLibrary: (() => void) | undefined;
+    let unlistenImportLibrary: (() => void) | undefined;
 
     const setupListener = async () => {
       const appWindow = getCurrentWebviewWindow();
@@ -131,8 +141,19 @@ function AppContent() {
       });
       unlistenPluginDevGuide = await appWindow.listen("menu-plugin-dev-guide", () => {
         console.log("[App] menu-plugin-dev-guide event received");
-        // TODO: Open plugin development guide
         alert("插件开发指导功能即将推出");
+      });
+      unlistenResetApp = await appWindow.listen("menu-reset-app", () => {
+        console.log("[App] menu-reset-app event received");
+        setShowResetApp(true);
+      });
+      unlistenExportLibrary = await appWindow.listen("menu-export-library", () => {
+        console.log("[App] menu-export-library event received");
+        setShowExportLibrary(true);
+      });
+      unlistenImportLibrary = await appWindow.listen("menu-import-library", () => {
+        console.log("[App] menu-import-library event received");
+        setShowImportLibrary(true);
       });
     };
 
@@ -148,6 +169,9 @@ function AppContent() {
       unlistenLibraryMgmt?.();
       unlistenAbout?.();
       unlistenPluginDevGuide?.();
+      unlistenResetApp?.();
+      unlistenExportLibrary?.();
+      unlistenImportLibrary?.();
     };
   }, []);
 
@@ -182,6 +206,19 @@ function AppContent() {
 
   const handleAssetClick = (asset: Asset) => {
     setSelectedAssetId(asset.id);
+  };
+
+  const handleCopyImage = async () => {
+    if (selectedAssetIds.length !== 1) return;
+
+    try {
+      const filePath = await getAssetFilePath(selectedAssetIds[0]);
+      const imageData = await readFile(filePath);
+      await writeImage(imageData);
+      console.log("Image copied to clipboard");
+    } catch (error) {
+      console.error("Failed to copy image:", error);
+    }
   };
 
   const renderPage = () => {
@@ -229,6 +266,7 @@ function AppContent() {
               // Split image functionality - to be implemented
               console.log("Split image clicked");
             }}
+            onCopyImage={handleCopyImage}
           />
           {assetsData && !searchResults && (
             <div className="px-4 py-2 border-t border-border text-xs text-text-secondary">
@@ -323,6 +361,10 @@ function AppContent() {
       <AboutDialog
         open={showAbout}
         onClose={() => setShowAbout(false)}
+      />
+      <ResetAppDialog
+        open={showResetApp}
+        onClose={() => setShowResetApp(false)}
       />
     </MainLayout>
   );

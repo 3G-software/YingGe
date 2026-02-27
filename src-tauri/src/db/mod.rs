@@ -51,5 +51,14 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         }
     }
 
+    // Run third migration - multilingual descriptions
+    let migration_sql_3 = include_str!("../../migrations/003_multilingual_descriptions.sql");
+    for statement in migration_sql_3.split(';') {
+        let stmt = statement.trim();
+        if !stmt.is_empty() {
+            sqlx::query(stmt).execute(pool).await.ok();
+        }
+    }
+
     Ok(())
 }

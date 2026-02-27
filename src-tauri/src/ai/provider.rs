@@ -16,6 +16,8 @@ pub struct SuggestedTag {
 pub struct AnalysisResult {
     pub tags: Vec<SuggestedTag>,
     pub description: String,
+    pub description_en: String,
+    pub description_zh: String,
     pub suggested_name: Option<String>,
 }
 
@@ -72,7 +74,7 @@ impl AiProvider for OpenAiCompatibleProvider {
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are an asset tagging system for game development. Analyze the given image and return a JSON object with:\n1. \"tags\": array of objects with \"name\" (lowercase, English), \"category\" (one of: content, style, color, mood, use_case), \"confidence\" (0-1)\n2. \"description\": one concise English sentence describing the asset\n3. \"suggested_name\": a descriptive filename in snake_case without extension\n\nReturn ONLY valid JSON, no markdown."
+                    "content": "You are an asset tagging system for game development. Analyze the given image and return a JSON object with:\n1. \"tags\": array of objects with \"name\" (lowercase, English), \"category\" (one of: content, style, color, mood, use_case), \"confidence\" (0-1)\n2. \"description_en\": one concise English sentence describing the asset\n3. \"description_zh\": one concise Chinese sentence describing the asset (用中文描述)\n4. \"suggested_name\": a descriptive filename in snake_case without extension\n\nReturn ONLY valid JSON, no markdown."
                 },
                 {
                     "role": "user",
@@ -83,14 +85,22 @@ impl AiProvider for OpenAiCompatibleProvider {
                         },
                         {
                             "type": "text",
-                            "text": "Analyze this game asset image. Return JSON with tags, description, and suggested_name."
+                            "text": "Analyze this game asset image. Return JSON with tags, description_en, description_zh, and suggested_name."
                         }
                     ]
                 }
             ],
             "max_tokens": 1000,
-            "temperature": 0.3
+            "temperature": 0.0
         });
+
+        tracing::info!("=== AI Vision Request ===");
+        tracing::info!("Model: {}", self.model);
+        tracing::info!("Temperature: 0.0");
+        tracing::info!("Max tokens: 1000");
+        tracing::info!("Image size: {} bytes (base64)", image_base64.len());
+        tracing::info!("Mime type: {}", mime_type);
+        tracing::info!("=========================");
 
         // Smart URL construction:
         // If endpoint already contains chat/completions path, use it directly
@@ -173,8 +183,46 @@ impl AiProvider for OpenAiCompatibleProvider {
             .trim_end_matches("```")
             .trim();
 
-        let result: AnalysisResult = serde_json::from_str(clean)
+        tracing::info!("=== AI Raw Response ===");
+        tracing::info!("{}", clean);
+        tracing::info!("=======================");
+
+        // Parse as generic JSON first, then map to AnalysisResult
+        let raw: serde_json::Value = serde_json::from_str(clean)
             .map_err(|e| AppError::Ai(format!("Failed to parse AI response as JSON: {}. Raw: {}", e, clean)))?;
+
+        // Extract descriptions - support both old format (description) and new format (description_en/description_zh)
+        let description_en = raw.get("description_en")
+            .and_then(|v| v.as_str())
+            .or_else(|| raw.get("description").and_then(|v| v.as_str()))
+            .unwrap_or("")
+            .to_string();
+        let description_zh = raw.get("description_zh")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let tags: Vec<SuggestedTag> = raw.get("tags")
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
+
+        let suggested_name = raw.get("suggested_name")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let result = AnalysisResult {
+            tags,
+            description: description_en.clone(),
+            description_en,
+            description_zh,
+            suggested_name,
+        };
+
+        tracing::info!("=== AI Vision Response ===");
+        tracing::info!("Description (EN): {}", result.description_en);
+        tracing::info!("Description (ZH): {}", result.description_zh);
+        tracing::info!("Tags: {:?}", result.tags.iter().map(|t| &t.name).collect::<Vec<_>>());
+        tracing::info!("==========================");
 
         Ok(result)
     }
@@ -243,18 +291,31 @@ impl AiProvider for OpenAiCompatibleProvider {
         if !resp.status().is_success() {
             let status = resp.status();
             let text = resp.text().await.unwrap_or_default();
+            tracing::error!("Embedding API error - Status: {}, Response: {}", status, text);
             return Err(AppError::Ai(format!(
                 "Embedding API returned {}: {}",
                 status, text
             )));
         }
 
-        let json: serde_json::Value = resp.json().await
-            .map_err(|e| AppError::Ai(format!("Failed to parse embedding response: {}", e)))?;
+        let resp_text = resp.text().await
+            .map_err(|e| AppError::Ai(format!("Failed to read embedding response: {}", e)))?;
+
+        tracing::info!("Embedding response received, parsing JSON...");
+
+        let json: serde_json::Value = serde_json::from_str(&resp_text)
+            .map_err(|e| {
+                tracing::error!("Failed to parse embedding response as JSON: {}", e);
+                tracing::error!("Raw response: {}", resp_text);
+                AppError::Ai(format!("Failed to parse embedding response: {}", e))
+            })?;
 
         let embedding = json["data"][0]["embedding"]
             .as_array()
-            .ok_or_else(|| AppError::Ai("No embedding in response".to_string()))?
+            .ok_or_else(|| {
+                tracing::error!("No embedding array in response. JSON structure: {}", json);
+                AppError::Ai("No embedding in response".to_string())
+            })?
             .iter()
             .filter_map(|v| v.as_f64().map(|f| f as f32))
             .collect();

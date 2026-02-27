@@ -5,7 +5,8 @@ import {
   Minimize2,
   Maximize2,
   Grid3x3,
-  Scissors
+  Scissors,
+  Copy
 } from "lucide-react";
 
 interface AssetContextMenuProps {
@@ -19,6 +20,7 @@ interface AssetContextMenuProps {
   onResize: () => void;
   onMergeSpritesheet: () => void;
   onSplitImage: () => void;
+  onCopyImage: () => void;
 }
 
 export function AssetContextMenu({
@@ -32,12 +34,19 @@ export function AssetContextMenu({
   onResize,
   onMergeSpritesheet,
   onSplitImage,
+  onCopyImage,
 }: AssetContextMenuProps) {
   const { t } = useTranslation();
   const isSingleAsset = assetCount === 1;
   const isMultipleAssets = assetCount > 1;
 
   const menuItems = [
+    {
+      icon: Copy,
+      label: t("tools.copyImage"),
+      onClick: onCopyImage,
+      show: isSingleAsset,
+    },
     {
       icon: Eraser,
       label: t("tools.removeBackground"),

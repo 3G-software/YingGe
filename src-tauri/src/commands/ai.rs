@@ -63,9 +63,15 @@ pub async fn ai_tag_asset(
         tracing::info!("  Suggested name: {}", name);
     }
 
-    // Update asset description
-    tracing::info!("Updating asset description...");
-    queries::update_asset_description(&pool, &asset_id, &analysis.description).await?;
+    // Update asset description with multilingual support
+    tracing::info!("Updating asset descriptions (EN & ZH)...");
+    queries::update_asset_ai_descriptions(
+        &pool,
+        &asset_id,
+        &analysis.description_en,
+        &analysis.description_zh,
+    )
+    .await?;
 
     // Create/assign tags
     let mut assigned_tags = Vec::new();
@@ -80,13 +86,14 @@ pub async fn ai_tag_asset(
 
     // Generate and store embedding for semantic search
     tracing::info!("Generating embedding for semantic search...");
-    if let Ok(embedding_bytes) =
-        embed_text_to_bytes(&analysis.description, &ai_manager).await
-    {
-        queries::save_embedding(&pool, &asset_id, "default", &embedding_bytes).await?;
-        tracing::info!("Embedding saved successfully");
-    } else {
-        tracing::warn!("Failed to generate embedding");
+    match embed_text_to_bytes(&analysis.description, &ai_manager).await {
+        Ok(embedding_bytes) => {
+            queries::save_embedding(&pool, &asset_id, "default", &embedding_bytes).await?;
+            tracing::info!("Embedding saved successfully");
+        }
+        Err(e) => {
+            tracing::warn!("Failed to generate embedding: {}", e);
+        }
     }
 
     tracing::info!("=== AI Tagging Completed for asset: {} ===", asset_id);

@@ -146,8 +146,8 @@ export const testAiConnection = (config: AiConfigInput) =>
 
 // --- Processing ---
 
-export const removeBackground = (assetId: string) =>
-  invoke<Asset>("remove_background", { assetId });
+export const removeBackground = (assetId: string, suffix: string) =>
+  invoke<Asset>("remove_background", { assetId, suffix });
 
 export const mergeSpritesheet = (params: {
   assetIds: string[];
@@ -203,6 +203,30 @@ export const resizeImage = (params: {
 
 export const saveEditedImage = (assetId: string, imageData: string) =>
   invoke<Asset>("save_edited_image", { assetId, imageData });
+
+// --- Library IO ---
+
+export interface ImportCheckResult {
+  has_duplicates: boolean;
+  duplicate_assets: { file_name: string; relative_path: string }[];
+  library_name: string;
+  total_assets: number;
+}
+
+export const exportLibrary = (libraryId: string, outputPath: string) =>
+  invoke<string>("export_library", { libraryId, outputPath });
+
+export const exportAllLibraries = (outputPath: string) =>
+  invoke<string>("export_all_libraries", { outputPath });
+
+export const checkImportLibrary = (zipPath: string, targetLibraryId?: string) =>
+  invoke<ImportCheckResult>("check_import_library", { zipPath, targetLibraryId });
+
+export const importLibrary = (zipPath: string, targetPath: string, mergeMode: string) =>
+  invoke<Library>("import_library", { zipPath, targetPath, mergeMode });
+
+export const resetApplication = () =>
+  invoke<void>("reset_application", {});
 
 // --- Menu ---
 
