@@ -38,17 +38,23 @@ A cross-platform desktop application for game asset management with AI-powered t
 
 ## Installation
 
-### Download Pre-built Binaries
+### Download Installation Packages
 
-Download the latest version from [GitHub Releases](https://github.com/ojwftded/YingGe/releases):
+Download the latest version for your platform from [GitHub Releases](https://github.com/ojwftded/YingGe/releases):
 
-- **macOS**:
-  - Apple Silicon (M1/M2/M3): `YingGe_x.x.x_aarch64.dmg`
-  - Intel: `YingGe_x.x.x_x64.dmg`
-- **Windows**: `YingGe_x.x.x_x64-setup.exe`
-- **Linux**:
-  - Debian/Ubuntu: `YingGe_x.x.x_amd64.deb`
-  - AppImage: `YingGe_x.x.x_amd64.AppImage`
+#### macOS
+- **Apple Silicon (M1/M2/M3/M4)**: `YingGe_x.x.x_aarch64.dmg`
+- **Intel**: `YingGe_x.x.x_x64.dmg`
+
+#### Windows
+- **Installer**: `YingGe_x.x.x_x64-setup.exe` (Recommended)
+- **MSI**: `YingGe_x.x.x_x64-en-US.msi`
+- **Portable**: `YingGe_x.x.x_x64.zip` (No installation required)
+
+#### Linux
+- **Debian/Ubuntu**: `yingge_x.x.x_amd64.deb`
+- **AppImage**: `yingge_x.x.x_amd64.AppImage` (Universal)
+- **RPM**: `yingge-x.x.x-1.x86_64.rpm` (Fedora/RHEL/CentOS)
 
 ### Build from Source
 

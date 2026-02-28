@@ -38,17 +38,23 @@
 
 ## 安装
 
-### 下载预编译版本
+### 下载安装包
 
-从 [GitHub Releases](https://github.com/ojwftded/YingGe/releases) 下载最新版本：
+从 [GitHub Releases](https://github.com/ojwftded/YingGe/releases) 下载适合你平台的最新版本：
 
-- **macOS**：
-  - Apple Silicon (M1/M2/M3)：`YingGe_x.x.x_aarch64.dmg`
-  - Intel：`YingGe_x.x.x_x64.dmg`
-- **Windows**：`YingGe_x.x.x_x64-setup.exe`
-- **Linux**：
-  - Debian/Ubuntu：`YingGe_x.x.x_amd64.deb`
-  - AppImage：`YingGe_x.x.x_amd64.AppImage`
+#### macOS
+- **Apple Silicon (M1/M2/M3/M4)**：`YingGe_x.x.x_aarch64.dmg`
+- **Intel**：`YingGe_x.x.x_x64.dmg`
+
+#### Windows
+- **安装程序**：`YingGe_x.x.x_x64-setup.exe`（推荐）
+- **MSI**：`YingGe_x.x.x_x64-en-US.msi`
+- **便携版**：`YingGe_x.x.x_x64.zip`（无需安装）
+
+#### Linux
+- **Debian/Ubuntu**：`yingge_x.x.x_amd64.deb`
+- **AppImage**：`yingge_x.x.x_amd64.AppImage`（通用）
+- **RPM**：`yingge-x.x.x-1.x86_64.rpm`（Fedora/RHEL/CentOS）
 
 ### 从源码构建
 

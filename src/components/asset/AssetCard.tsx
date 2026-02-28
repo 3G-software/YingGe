@@ -45,7 +45,7 @@ export function AssetCard({ asset, onClick }: AssetCardProps) {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
+  const handleDragStart = (_e: React.DragEvent) => {
     // If dragging a selected asset, drag all selected assets
     // If dragging an unselected asset, select it first
     const assetsToDrag = isSelected ? selectedAssetIds : [asset.id];
