@@ -4,6 +4,8 @@
 
 A cross-platform desktop application for game asset management with AI-powered tagging and semantic search.
 
+![YingGe Application Interface](public/sample1.png)
+
 ## Features
 
 - **Asset Management**: Import and organize images, audio, and video files in local libraries
@@ -18,6 +20,8 @@ A cross-platform desktop application for game asset management with AI-powered t
   - Remove image background (color-key method)
   - Merge images into sprite sheets with game engine descriptors (Unity, Godot, Cocos2d)
   - Split images into grid sub-images
+  - Compress images
+  - Resize images
 - **Plugin System**: Extend functionality with JavaScript/TypeScript plugins
 - **Internationalization**: Built-in support for English and Chinese
 

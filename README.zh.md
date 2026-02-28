@@ -4,20 +4,24 @@
 
 一个跨平台的游戏资源管理桌面应用，支持 AI 自动标签和语义搜索。
 
+![YingGe 应用界面](public/sample1.png)
+
 ## 功能特性
 
 - **资源管理**：在本地资源库中导入和组织图片、音频和视频文件
 - **文件夹组织**：创建嵌套文件夹结构，支持拖放操作
   - 右键菜单快速操作（导入、创建文件夹、重命名）
-  - 可展开/折叠的文件夹树，层级清晰
-  - 直接导入资源到指定文件夹
+  - 可展开/折叠的文件夹树，带视觉层次结构
+  - 直接将资源导入到指定文件夹
 - **AI 自动标签**：使用视觉 AI 模型（兼容 OpenAI API）自动分析资源，生成标签和描述
 - **语义搜索**：使用自然语言查询查找资源（例如："适合跑酷游戏的资源"）
-- **标签系统**：创建、管理和按标签筛选资源，支持全文搜索
+- **标签系统**：创建、管理和通过标签筛选资源，支持全文搜索
 - **处理工具**：
   - 移除图片背景（色键方法）
   - 合并图片为精灵图，支持游戏引擎描述符（Unity、Godot、Cocos2d）
   - 将图片分割为网格子图
+  - 压缩图片
+  - 调整图片尺寸
 - **插件系统**：使用 JavaScript/TypeScript 插件扩展功能
 - **国际化**：内置英文和中文支持
 
@@ -31,6 +35,24 @@
 | 状态管理 | Zustand + TanStack Query |
 | 数据库 | SQLite (sqlx) + FTS5 |
 | AI 集成 | OpenAI 兼容 API（可配置）|
+
+## 安装
+
+### 下载预编译版本
+
+从 [GitHub Releases](https://github.com/ojwftded/YingGe/releases) 下载最新版本：
+
+- **macOS**：
+  - Apple Silicon (M1/M2/M3)：`YingGe_x.x.x_aarch64.dmg`
+  - Intel：`YingGe_x.x.x_x64.dmg`
+- **Windows**：`YingGe_x.x.x_x64-setup.exe`
+- **Linux**：
+  - Debian/Ubuntu：`YingGe_x.x.x_amd64.deb`
+  - AppImage：`YingGe_x.x.x_amd64.AppImage`
+
+### 从源码构建
+
+参见下方[开发](#开发)部分。
 
 ## 开发
 
@@ -107,10 +129,6 @@ YingGe 支持任何兼容 OpenAI 的 API 端点。在设置中配置：
 ## 贡献
 
 欢迎贡献。所有贡献者必须通过签署提交来同意[贡献者许可协议](CLA.md)。
-
-```bash
-git commit -s -m "你的提交信息"
-```
 
 ## 许可证
 
