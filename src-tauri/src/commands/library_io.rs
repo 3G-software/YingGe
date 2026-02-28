@@ -531,7 +531,6 @@ pub async fn import_library(
     }
 
     tracing::info!("Import complete: {} assets imported, {} skipped", imported_count, skipped_count);
-
     // Import asset-tag relationships
     for asset_tag in &export_data.asset_tags {
         if let (Some(new_asset_id), Some(new_tag_id)) = (
