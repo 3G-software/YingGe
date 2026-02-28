@@ -32,6 +32,24 @@ A cross-platform desktop application for game asset management with AI-powered t
 | Database | SQLite (sqlx) + FTS5 |
 | AI Integration | OpenAI-compatible API (configurable) |
 
+## Installation
+
+### Download Pre-built Binaries
+
+Download the latest version from [GitHub Releases](https://github.com/ojwftded/YingGe/releases):
+
+- **macOS**:
+  - Apple Silicon (M1/M2/M3): `YingGe_x.x.x_aarch64.dmg`
+  - Intel: `YingGe_x.x.x_x64.dmg`
+- **Windows**: `YingGe_x.x.x_x64-setup.exe`
+- **Linux**:
+  - Debian/Ubuntu: `YingGe_x.x.x_amd64.deb`
+  - AppImage: `YingGe_x.x.x_amd64.AppImage`
+
+### Build from Source
+
+See [Development](#development) section below.
+
 ## Development
 
 ### Prerequisites

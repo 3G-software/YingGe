@@ -1,13 +1,32 @@
 {
   "name": "yingge",
-  "private": true,
+  "private": false,
   "version": "0.1.0",
   "type": "module",
+  "description": "YingGe - A powerful game asset management tool with AI-powered tagging and organization",
+  "author": {
+    "name": "ojwftded",
+    "email": "514333726@qq.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ojwftded/YingGe.git"
+  },
+  "keywords": [
+    "asset-management",
+    "game-development",
+    "ai-tagging",
+    "tauri",
+    "desktop-app"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "reset-db": "rm -rf \"$HOME/Library/Application Support/com.yingge.app/yingge.db\"*"
   },
   "dependencies": {

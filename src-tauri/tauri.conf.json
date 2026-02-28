@@ -39,6 +39,20 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "YingGe Team",
+    "copyright": "Copyright © 2026 YingGe Team",
+    "category": "DeveloperTool",
+    "shortDescription": "AI-powered game asset management tool",
+    "longDescription": "YingGe is a powerful desktop application for managing game assets with AI-powered tagging, semantic search, and comprehensive organization features.",
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "exceptionDomain": ""
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
   }
 }

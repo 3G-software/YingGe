@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+src-tauri/target/
+src-tauri/WixTools/
+
+# Development files
+.vscode/
+.idea/
+*.log
+*.lock
+.DS_Store
+Thumbs.db
+
+# Tauri specific
+src-tauri/target/
+src-tauri/gen/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# Testing
+coverage/
+*.test.*
+*.spec.*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.swp
+*.swo
+*~
+.tmp/
+temp/
+
+# Documentation (keep only essential docs)
+docs/
+*.md
+!README.md
+!LICENSE
+!CHANGELOG.md
+
+# Database
+*.db
+*.db-shm
+*.db-wal
