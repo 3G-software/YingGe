@@ -546,6 +546,115 @@ pub async fn create_folder(
     Ok(())
 }
 
+/// Copy asset files to system clipboard as file references (for pasting into Finder/Explorer)
+#[tauri::command]
+pub async fn copy_files_to_clipboard(
+    ids: Vec<String>,
+    pool: State<'_, SqlitePool>,
+) -> Result<(), AppError> {
+    // Resolve absolute file paths
+    let mut paths = Vec::new();
+    for id in &ids {
+        let asset = queries::get_asset(&pool, id).await?;
+        let library = queries::get_library(&pool, &asset.library_id).await?;
+        let full_path = std::path::Path::new(&library.root_path).join(&asset.relative_path);
+        if full_path.exists() {
+            paths.push(full_path.to_string_lossy().to_string());
+        }
+    }
+
+    if paths.is_empty() {
+        return Err(AppError::NotFound("No valid files found".to_string()));
+    }
+
+    copy_paths_to_clipboard(&paths).map_err(|e| AppError::Internal(e))
+}
+
+#[cfg(target_os = "macos")]
+fn copy_paths_to_clipboard(paths: &[String]) -> Result<(), String> {
+    use std::process::Command;
+
+    let file_refs: Vec<String> = paths
+        .iter()
+        .map(|p| format!("(POSIX file \"{}\")", p.replace('\\', "\\\\").replace('"', "\\\"")))
+        .collect();
+
+    let script = if file_refs.len() == 1 {
+        format!("set the clipboard to {}", file_refs[0])
+    } else {
+        format!("set the clipboard to {{{}}}", file_refs.join(", "))
+    };
+
+    let output = Command::new("osascript")
+        .arg("-e")
+        .arg(&script)
+        .output()
+        .map_err(|e| format!("Failed to run osascript: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "osascript failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ))
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn copy_paths_to_clipboard(paths: &[String]) -> Result<(), String> {
+    use std::process::Command;
+
+    let ps_paths: Vec<String> = paths.iter().map(|p| format!("'{}'", p)).collect();
+    let script = format!("Set-Clipboard -Path @({})", ps_paths.join(","));
+
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-Command", &script])
+        .output()
+        .map_err(|e| format!("Failed to run PowerShell: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "PowerShell failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ))
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn copy_paths_to_clipboard(paths: &[String]) -> Result<(), String> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let uri_list: String = paths
+        .iter()
+        .map(|p| format!("file://{}", p))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let mut child = Command::new("xclip")
+        .args(["-selection", "clipboard", "-t", "text/uri-list"])
+        .stdin(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to run xclip: {}", e))?;
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(uri_list.as_bytes())
+        .map_err(|e| format!("Failed to write to xclip: {}", e))?;
+
+    let status = child.wait().map_err(|e| format!("xclip failed: {}", e))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err("xclip exited with error".to_string())
+    }
+}
+
 /// Rename a folder
 #[tauri::command]
 pub async fn rename_folder(

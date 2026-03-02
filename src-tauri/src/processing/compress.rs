@@ -21,7 +21,7 @@ pub fn compress_image_dynamic(
     img: &DynamicImage,
     max_width: Option<u32>,
     max_height: Option<u32>,
-    quality: u8,
+    _quality: u8,
 ) -> Result<DynamicImage, AppError> {
     let (orig_w, orig_h) = (img.width(), img.height());
     let max_w = max_width.unwrap_or(orig_w);

@@ -16,7 +16,9 @@
     "loading": "加载中...",
     "error": "错误",
     "success": "成功",
-    "comingSoon": "即将推出"
+    "comingSoon": "即将推出",
+    "reset": "重置",
+    "processing": "处理中..."
   },
   "library": {
     "title": "资源库",
@@ -135,7 +137,20 @@
     "compressImageDesc": "压缩图片体积，支持调整尺寸和质量",
     "resizeImage": "调整尺寸",
     "resizeImageDesc": "调整图片尺寸，支持保持宽高比",
-    "copyImage": "复制图片"
+    "copyImage": "复制图片",
+    "cropImage": "裁剪图片",
+    "cropImageDesc": "裁剪图片到选定区域",
+    "cropRegion": "裁剪区域",
+    "selectCropRegion": "拖动选择裁剪区域",
+    "cropSuccess": "裁剪成功",
+    "cropFailed": "裁剪失败",
+    "pluginManager": "插件管理",
+    "noPluginsInstalled": "未安装插件",
+    "importPlugin": "导入插件",
+    "uninstall": "卸载",
+    "confirmUninstallPlugin": "确定要卸载此插件吗？",
+    "pluginImportFailed": "导入插件失败",
+    "pluginUninstallFailed": "卸载插件失败"
   },
   "compress": {
     "selectAsset": "请先在资源列表中选择图片",

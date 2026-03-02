@@ -135,7 +135,20 @@
     "compressImageDesc": "Compress image size by adjusting dimensions and quality",
     "resizeImage": "Resize Image",
     "resizeImageDesc": "Resize image dimensions with aspect ratio support",
-    "copyImage": "Copy Image"
+    "copyImage": "Copy Image",
+    "cropImage": "Crop Image",
+    "cropImageDesc": "Crop image to a selected region",
+    "cropRegion": "Crop Region",
+    "selectCropRegion": "Drag to select crop region",
+    "cropSuccess": "Crop Successful",
+    "cropFailed": "Crop Failed",
+    "pluginManager": "Plugin Manager",
+    "noPluginsInstalled": "No plugins installed",
+    "importPlugin": "Import Plugin",
+    "uninstall": "Uninstall",
+    "confirmUninstallPlugin": "Are you sure you want to uninstall this plugin?",
+    "pluginImportFailed": "Failed to import plugin",
+    "pluginUninstallFailed": "Failed to uninstall plugin"
   },
   "compress": {
     "selectAsset": "Please select image(s) from the asset list first",
@@ -271,5 +284,9 @@
     "success": "Save Successful",
     "successMessage": "Edited image has been saved to library",
     "processing": "Saving..."
+  },
+  "common": {
+    "reset": "Reset",
+    "processing": "Processing..."
   }
 }

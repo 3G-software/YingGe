@@ -73,9 +73,9 @@ pub fn run() {
                 .build()?;
 
             // Create Plugins menu
-            let import_plugin_item = MenuItemBuilder::with_id("import-plugin", "导入插件").build(app)?;
+            let plugin_manager_item = MenuItemBuilder::with_id("plugin-manager", "插件管理").build(app)?;
             let plugins_menu = SubmenuBuilder::new(app, "插件")
-                .item(&import_plugin_item)
+                .item(&plugin_manager_item)
                 .build()?;
 
             // Create Help menu
@@ -136,8 +136,8 @@ pub fn run() {
                     "resize-image" => {
                         let _ = window.emit("menu-resize-image", ());
                     }
-                    "import-plugin" => {
-                        let _ = window.emit("menu-import-plugin", ());
+                    "plugin-manager" => {
+                        let _ = window.emit("menu-plugin-manager", ());
                     }
                     "about" => {
                         let _ = window.emit("menu-about", ());
@@ -202,6 +202,7 @@ pub fn run() {
             commands::asset::get_thumbnail_data,
             commands::asset::create_folder,
             commands::asset::rename_folder,
+            commands::asset::copy_files_to_clipboard,
             // Tag commands
             commands::tag::create_tag,
             commands::tag::list_tags,
@@ -229,6 +230,12 @@ pub fn run() {
             commands::processing::merge_spritesheet_with_size,
             commands::processing::resize_image,
             commands::processing::save_edited_image,
+            commands::processing::crop_image,
+            // Plugin commands
+            commands::plugin::list_plugins,
+            commands::plugin::read_plugin_file,
+            commands::plugin::import_plugin,
+            commands::plugin::uninstall_plugin,
             // Menu commands
             commands::menu::update_menu_language,
             // Library IO commands

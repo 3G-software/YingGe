@@ -132,6 +132,65 @@ YingGe supports any OpenAI-compatible API endpoint. Configure in Settings:
 3. Vision Model (e.g., `gpt-4o`) for asset tagging
 4. Embedding Model (e.g., `text-embedding-3-small`) for semantic search
 
+## Plugin Development
+
+YingGe supports extending functionality through JavaScript/TypeScript plugins. The `plugins/crop-image-plugin` directory contains a complete example demonstrating how to create a plugin.
+
+### Plugin Structure
+
+```
+your-plugin/
+├── manifest.json    # Plugin metadata and configuration
+├── index.js         # Main plugin code
+└── README.md        # Plugin documentation
+```
+
+### Example: Crop Image Plugin
+
+The crop image plugin demonstrates:
+
+- How to define plugin metadata in `manifest.json`
+- How to register actions that appear in the UI
+- How to call Tauri commands from plugins
+- How to handle user interactions
+
+See `plugins/crop-image-plugin/README.md` for detailed documentation.
+
+### Plugin Manifest
+
+```json
+{
+  "name": "your-plugin",
+  "version": "1.0.0",
+  "description": "Plugin description",
+  "author": "Your Name",
+  "license": "MIT",
+  "entry": "index.js",
+  "permissions": [
+    "asset:read",
+    "asset:write"
+  ],
+  "actions": [
+    {
+      "id": "your-action",
+      "label": "Your Action",
+      "icon": "icon-name",
+      "context": "asset-single"
+    }
+  ]
+}
+```
+
+### Plugin API
+
+Plugins have access to:
+
+- **context.api**: Core functionality (asset management, Tauri commands)
+- **context.ui**: UI interactions (dialogs, notifications)
+- **context.registerAction**: Register custom actions
+
+For a complete example, see the crop image plugin in the `plugins/` directory.
+
 ## Contributing
 
 Contributions are welcome. All contributors must agree to the [Contributor License Agreement](CLA.md) by signing off their commits.

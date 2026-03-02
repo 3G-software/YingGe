@@ -1,0 +1,39 @@
+{
+  "name": "crop-image-plugin",
+  "version": "1.0.0",
+  "description": "A plugin that adds image cropping functionality to YingGe",
+  "author": "YingGe Team",
+  "license": "MIT",
+  "entry": "index.js",
+  "permissions": [
+    "asset:read",
+    "asset:write",
+    "processing:crop"
+  ],
+  "actions": [
+    {
+      "id": "crop-image",
+      "label": {
+        "en": "Crop Image",
+        "zh": "裁剪图片"
+      },
+      "description": {
+        "en": "Crop image to a selected region",
+        "zh": "裁剪图片到选定区域"
+      },
+      "icon": "crop",
+      "context": "asset-single"
+    }
+  ],
+  "i18n": {
+    "en": {
+      "cropSuccess": "Image cropped successfully",
+      "cropFailed": "Failed to crop image"
+    },
+    "zh": {
+      "cropSuccess": "图片裁剪成功",
+      "cropFailed": "图片裁剪失败"
+    }
+  },
+  "settings": []
+}

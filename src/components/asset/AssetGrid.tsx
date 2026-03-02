@@ -17,6 +17,7 @@ interface AssetGridProps {
   onMergeSpritesheet: () => void;
   onSplitImage: () => void;
   onCopyImage: () => void;
+  onCopyFiles: () => void;
 }
 
 interface SelectionBox {
@@ -36,6 +37,7 @@ export function AssetGrid({
   onMergeSpritesheet,
   onSplitImage,
   onCopyImage,
+  onCopyFiles,
 }: AssetGridProps) {
   const viewMode = useAppStore((s) => s.viewMode);
   const { selectedAssetIds, setSelectedAssetIds, currentFolder } = useAppStore();
@@ -70,8 +72,8 @@ export function AssetGrid({
         setCopiedAssetIds([...selectedAssetIds]);
         setCutAssetIds([]); // Clear cut when copying
         console.log('[AssetGrid] Copied:', selectedAssetIds.length, 'assets');
-        // Also copy to system clipboard
-        onCopyImage();
+        // Copy file references to system clipboard (for pasting into Finder/Explorer)
+        onCopyFiles();
       }
 
       // Ctrl/Cmd + X: Cut (for moving)
@@ -333,6 +335,7 @@ export function AssetGrid({
           x={contextMenu.x}
           y={contextMenu.y}
           assetCount={selectedAssetIds.length}
+          selectedAssetId={selectedAssetIds.length === 1 ? selectedAssetIds[0] : undefined}
           onClose={() => setContextMenu(null)}
           onRemoveBackground={onRemoveBackground}
           onImageEditor={onImageEditor}

@@ -3,6 +3,7 @@ pub mod asset;
 pub mod library;
 pub mod library_io;
 pub mod menu;
+pub mod plugin;
 pub mod processing;
 pub mod search;
 pub mod tag;

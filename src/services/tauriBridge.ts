@@ -80,6 +80,9 @@ export const renameFolder = (libraryId: string, oldPath: string, newName: string
 export const getAssetFilePath = (id: string) =>
   invoke<string>("get_asset_file_path", { id });
 
+export const copyFilesToClipboard = (ids: string[]) =>
+  invoke<void>("copy_files_to_clipboard", { ids });
+
 export const getThumbnailPath = (id: string) =>
   invoke<string | null>("get_thumbnail_path", { id });
 

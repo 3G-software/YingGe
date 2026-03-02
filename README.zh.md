@@ -132,6 +132,65 @@ YingGe 支持任何兼容 OpenAI 的 API 端点。在设置中配置：
 3. 视觉模型（例如：`gpt-4o`）用于资源标签
 4. 嵌入模型（例如：`text-embedding-3-small`）用于语义搜索
 
+## 插件开发
+
+YingGe 支持通过 JavaScript/TypeScript 插件扩展功能。`plugins/crop-image-plugin` 目录包含一个完整的示例，演示如何创建插件。
+
+### 插件结构
+
+```
+your-plugin/
+├── manifest.json    # 插件元数据和配置
+├── index.js         # 主插件代码
+└── README.md        # 插件文档
+```
+
+### 示例：裁剪图片插件
+
+裁剪图片插件演示了：
+
+- 如何在 `manifest.json` 中定义插件元数据
+- 如何注册在 UI 中显示的操作
+- 如何从插件调用 Tauri 命令
+- 如何处理用户交互
+
+详细文档请参见 `plugins/crop-image-plugin/README.md`。
+
+### 插件清单
+
+```json
+{
+  "name": "your-plugin",
+  "version": "1.0.0",
+  "description": "插件描述",
+  "author": "你的名字",
+  "license": "MIT",
+  "entry": "index.js",
+  "permissions": [
+    "asset:read",
+    "asset:write"
+  ],
+  "actions": [
+    {
+      "id": "your-action",
+      "label": "你的操作",
+      "icon": "icon-name",
+      "context": "asset-single"
+    }
+  ]
+}
+```
+
+### 插件 API
+
+插件可以访问：
+
+- **context.api**：核心功能（资源管理、Tauri 命令）
+- **context.ui**：UI 交互（对话框、通知）
+- **context.registerAction**：注册自定义操作
+
+完整示例请参见 `plugins/` 目录中的裁剪图片插件。
+
 ## 贡献
 
 欢迎贡献。所有贡献者必须通过签署提交来同意[贡献者许可协议](CLA.md)。

@@ -23,11 +23,13 @@ import { ExportLibraryDialog } from "./components/library/ExportLibraryDialog";
 import { ImportLibraryDialog } from "./components/library/ImportLibraryDialog";
 import { AboutDialog } from "./components/common/AboutDialog";
 import { ResetAppDialog } from "./components/common/ResetAppDialog";
+import { PluginProvider } from "./contexts/PluginContext";
+import { PluginManagerDialog } from "./components/plugin/PluginManagerDialog";
 import { useAssets } from "./hooks/useAssets";
 import { useLibraries } from "./hooks/useLibrary";
 import { useAppStore } from "./stores/appStore";
 import { useKeywordSearch, useSemanticSearch } from "./hooks/useSearch";
-import { getAssetFilePath } from "./services/tauriBridge";
+import { getAssetFilePath, copyFilesToClipboard } from "./services/tauriBridge";
 import type { Asset } from "./types/asset";
 
 const queryClient = new QueryClient({
@@ -54,6 +56,7 @@ function AppContent() {
   const [showResetApp, setShowResetApp] = useState(false);
   const [showExportLibrary, setShowExportLibrary] = useState(false);
   const [showImportLibrary, setShowImportLibrary] = useState(false);
+  const [showPluginManager, setShowPluginManager] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Asset[] | null>(null);
 
@@ -94,6 +97,25 @@ function AppContent() {
 
   // Listen for menu events
   useEffect(() => {
+    // Listen for plugin notifications
+    const handlePluginNotification = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { type, message } = customEvent.detail;
+
+      // For now, use alert. TODO: Implement proper notification system
+      if (type === 'error') {
+        alert(`❌ ${message}`);
+      } else if (type === 'success') {
+        alert(`✅ ${message}`);
+      } else if (type === 'warning') {
+        alert(`⚠️ ${message}`);
+      } else {
+        alert(`ℹ️ ${message}`);
+      }
+    };
+
+    window.addEventListener('plugin-notification', handlePluginNotification);
+
     let unlistenImport: (() => void) | undefined;
     let unlistenCompress: (() => void) | undefined;
     let unlistenSpritesheet: (() => void) | undefined;
@@ -106,6 +128,7 @@ function AppContent() {
     let unlistenResetApp: (() => void) | undefined;
     let unlistenExportLibrary: (() => void) | undefined;
     let unlistenImportLibrary: (() => void) | undefined;
+    let unlistenPluginManager: (() => void) | undefined;
 
     const setupListener = async () => {
       const appWindow = getCurrentWebviewWindow();
@@ -157,6 +180,10 @@ function AppContent() {
         console.log("[App] menu-import-library event received");
         setShowImportLibrary(true);
       });
+      unlistenPluginManager = await appWindow.listen("menu-plugin-manager", () => {
+        console.log("[App] menu-plugin-manager event received");
+        setShowPluginManager(true);
+      });
     };
 
     setupListener();
@@ -174,6 +201,8 @@ function AppContent() {
       unlistenResetApp?.();
       unlistenExportLibrary?.();
       unlistenImportLibrary?.();
+      unlistenPluginManager?.();
+      window.removeEventListener('plugin-notification', handlePluginNotification);
     };
   }, []);
 
@@ -223,6 +252,17 @@ function AppContent() {
     }
   };
 
+  const handleCopyFiles = async () => {
+    if (selectedAssetIds.length === 0) return;
+
+    try {
+      await copyFilesToClipboard(selectedAssetIds);
+      console.log("Files copied to clipboard:", selectedAssetIds.length);
+    } catch (error) {
+      console.error("Failed to copy files to clipboard:", error);
+    }
+  };
+
   const renderPage = () => {
     console.log("[App] renderPage called, route:", route);
     switch (route) {
@@ -269,6 +309,7 @@ function AppContent() {
               console.log("Split image clicked");
             }}
             onCopyImage={handleCopyImage}
+            onCopyFiles={handleCopyFiles}
           />
           {assetsData && !searchResults && (
             <div className="px-4 py-2 border-t border-border text-xs text-text-secondary">
@@ -376,6 +417,10 @@ function AppContent() {
         open={showImportLibrary}
         onClose={() => setShowImportLibrary(false)}
       />
+      <PluginManagerDialog
+        open={showPluginManager}
+        onClose={() => setShowPluginManager(false)}
+      />
     </MainLayout>
   );
 }
@@ -383,7 +428,9 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <PluginProvider>
+        <AppContent />
+      </PluginProvider>
     </QueryClientProvider>
   );
 }

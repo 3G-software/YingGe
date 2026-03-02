@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::db::{models::Asset, queries};
 use crate::error::AppError;
-use crate::processing::{background, compress, descriptor, spritesheet};
+use crate::processing::{background, compress, crop, descriptor, spritesheet};
 
 #[tauri::command]
 pub async fn remove_background(
@@ -739,3 +739,77 @@ pub async fn save_edited_image(
 
     Ok(saved)
 }
+
+/// Crop an image to the specified region and replace the original
+#[tauri::command]
+pub async fn crop_image(
+    asset_id: String,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    pool: State<'_, SqlitePool>,
+) -> Result<Asset, AppError> {
+    tracing::info!("Cropping image {} to region: x={}, y={}, w={}, h={}",
+        asset_id, x, y, width, height);
+
+    let asset = queries::get_asset(&pool, &asset_id).await?;
+    let library = queries::get_library(&pool, &asset.library_id).await?;
+    let library_root = std::path::Path::new(&library.root_path);
+    let source_path = library_root.join(&asset.relative_path);
+
+    // Perform the crop
+    let cropped_img = crop::crop_image(&source_path, x, y, width, height)?;
+
+    // Get the original file path
+    let output_path = library_root.join(&asset.relative_path);
+
+    // Ensure the directory exists
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    // Overwrite the original file with cropped image
+    cropped_img.save(&output_path)?;
+
+    // Regenerate thumbnail
+    let thumb_path =
+        crate::storage::thumbnail::generate_thumbnail(&output_path, library_root, &asset_id).ok();
+
+    let file_size = std::fs::metadata(&output_path)?.len() as i64;
+    let file_hash = crate::storage::file_ops::compute_file_hash(&output_path)?;
+
+    // Update the existing asset record
+    let updated_asset = Asset {
+        id: asset.id.clone(),
+        library_id: asset.library_id.clone(),
+        file_name: asset.file_name.clone(),
+        original_name: asset.original_name.clone(),
+        relative_path: asset.relative_path.clone(),
+        file_type: asset.file_type.clone(),
+        mime_type: "image/png".to_string(),
+        file_size,
+        file_hash,
+        width: Some(cropped_img.width() as i32),
+        height: Some(cropped_img.height() as i32),
+        duration_ms: None,
+        description: asset.description.clone(),
+        ai_description: asset.ai_description.clone(),
+        ai_description_en: asset.ai_description_en.clone(),
+        ai_description_zh: asset.ai_description_zh.clone(),
+        thumbnail_path: thumb_path,
+        folder_path: asset.folder_path.clone(),
+        created_at: asset.created_at.clone(),
+        updated_at: String::new(), // Will be set by database
+        imported_at: asset.imported_at.clone(),
+    };
+
+    // Update the asset in database
+    let saved = queries::update_asset(&pool, &updated_asset).await?;
+
+    tracing::info!("Image cropped and saved (replaced original): {} -> {}x{}",
+        saved.file_name, cropped_img.width(), cropped_img.height());
+
+    Ok(saved)
+}
+
