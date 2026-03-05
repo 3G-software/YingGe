@@ -146,6 +146,8 @@
     "noPluginsInstalled": "No plugins installed",
     "importPlugin": "Import Plugin",
     "uninstall": "Uninstall",
+    "builtin": "Built-in",
+    "cannotUninstallBuiltin": "Cannot uninstall built-in plugins",
     "confirmUninstallPlugin": "Are you sure you want to uninstall this plugin?",
     "pluginImportFailed": "Failed to import plugin",
     "pluginUninstallFailed": "Failed to uninstall plugin"
@@ -284,6 +286,19 @@
     "success": "Save Successful",
     "successMessage": "Edited image has been saved to library",
     "processing": "Saving..."
+  },
+  "saveAs": {
+    "title": "Save As",
+    "selectOneAsset": "Please select one image",
+    "format": "Output Format",
+    "quality": "Quality",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Save successful",
+    "error": "Save failed",
+    "icoNote": "ICO format is for Windows icon files",
+    "icnsNote": "ICNS format is for macOS icon files",
+    "jpegNote": "JPEG format will lose transparency information"
   },
   "common": {
     "reset": "Reset",

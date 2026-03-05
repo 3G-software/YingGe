@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { writeImage } from "@tauri-apps/plugin-clipboard-manager";
@@ -17,13 +17,14 @@ import { SpritesheetDialog } from "./components/processing/SpritesheetDialog";
 import { ResizeDialog } from "./components/processing/ResizeDialog";
 import { RemoveBackgroundDialog } from "./components/processing/RemoveBackgroundDialog";
 import { ImageEditorDialog } from "./components/processing/ImageEditorDialog";
+import { SaveAsDialog } from "./components/processing/SaveAsDialog";
 import { CreateLibraryModal } from "./components/library/CreateLibraryModal";
 import { LibraryManagementDialog } from "./components/library/LibraryManagementDialog";
 import { ExportLibraryDialog } from "./components/library/ExportLibraryDialog";
 import { ImportLibraryDialog } from "./components/library/ImportLibraryDialog";
 import { AboutDialog } from "./components/common/AboutDialog";
 import { ResetAppDialog } from "./components/common/ResetAppDialog";
-import { PluginProvider } from "./contexts/PluginContext";
+import { PluginProvider, usePlugins } from "./contexts/PluginContext";
 import { PluginManagerDialog } from "./components/plugin/PluginManagerDialog";
 import { useAssets } from "./hooks/useAssets";
 import { useLibraries } from "./hooks/useLibrary";
@@ -43,6 +44,7 @@ const queryClient = new QueryClient({
 
 function AppContent() {
   const { currentLibrary, setCurrentLibrary, selectedAssetIds } = useAppStore();
+  const { executePluginByName } = usePlugins();
   const [route, setRoute] = useState("/");
   const [showImport, setShowImport] = useState(false);
   const [showCreateLibrary, setShowCreateLibrary] = useState(false);
@@ -51,6 +53,7 @@ function AppContent() {
   const [showResize, setShowResize] = useState(false);
   const [showRemoveBackground, setShowRemoveBackground] = useState(false);
   const [showImageEditor, setShowImageEditor] = useState(false);
+  const [showSaveAs, setShowSaveAs] = useState(false);
   const [showLibraryMgmt, setShowLibraryMgmt] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showResetApp, setShowResetApp] = useState(false);
@@ -59,6 +62,27 @@ function AppContent() {
   const [showPluginManager, setShowPluginManager] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Asset[] | null>(null);
+
+  // Use refs to store latest values for event listeners (avoid closure issues)
+  const selectedAssetIdsRef = useRef<string[]>([]);
+  const selectedAssetIdRef = useRef<string | null>(null);
+  const listenersSetupRef = useRef(false);
+
+  // Update refs when state changes
+  useEffect(() => {
+    selectedAssetIdsRef.current = selectedAssetIds;
+  }, [selectedAssetIds]);
+
+  useEffect(() => {
+    selectedAssetIdRef.current = selectedAssetId;
+  }, [selectedAssetId]);
+
+  // Clear selectedAssetId when selectedAssetIds becomes empty
+  useEffect(() => {
+    if (selectedAssetIds.length === 0 && selectedAssetId) {
+      setSelectedAssetId(null);
+    }
+  }, [selectedAssetIds, selectedAssetId]);
 
   const { data: libraries } = useLibraries();
   const { data: assetsData } = useAssets();
@@ -97,10 +121,20 @@ function AppContent() {
 
   // Listen for menu events
   useEffect(() => {
+    // Prevent duplicate listener setup in StrictMode
+    if (listenersSetupRef.current) {
+      console.log('[App] Listeners already setup, skipping');
+      return;
+    }
+    listenersSetupRef.current = true;
+    console.log('[App] Setting up listeners');
+
     // Listen for plugin notifications
     const handlePluginNotification = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { type, message } = customEvent.detail;
+
+      console.log('[App] Plugin notification received:', type, message);
 
       // For now, use alert. TODO: Implement proper notification system
       if (type === 'error') {
@@ -116,7 +150,15 @@ function AppContent() {
 
     window.addEventListener('plugin-notification', handlePluginNotification);
 
+    // Listen for asset updates from plugins
+    const handleAssetUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ["assets"], refetchType: "all" });
+    };
+
+    window.addEventListener('asset-updated', handleAssetUpdated);
+
     let unlistenImport: (() => void) | undefined;
+    let unlistenSaveAs: (() => void) | undefined;
     let unlistenCompress: (() => void) | undefined;
     let unlistenSpritesheet: (() => void) | undefined;
     let unlistenResize: (() => void) | undefined;
@@ -129,12 +171,17 @@ function AppContent() {
     let unlistenExportLibrary: (() => void) | undefined;
     let unlistenImportLibrary: (() => void) | undefined;
     let unlistenPluginManager: (() => void) | undefined;
+    let unlistenPluginAction: (() => void) | undefined;
 
     const setupListener = async () => {
       const appWindow = getCurrentWebviewWindow();
       unlistenImport = await appWindow.listen("menu-import", () => {
         console.log("[App] menu-import event received");
         setShowImport(true);
+      });
+      unlistenSaveAs = await appWindow.listen("menu-save-as", () => {
+        console.log("[App] menu-save-as event received");
+        setShowSaveAs(true);
       });
       unlistenCompress = await appWindow.listen("menu-compress-image", () => {
         console.log("[App] menu-compress-image event received");
@@ -184,12 +231,50 @@ function AppContent() {
         console.log("[App] menu-plugin-manager event received");
         setShowPluginManager(true);
       });
+      unlistenPluginAction = await appWindow.listen<string>("menu-plugin-action", (event) => {
+        console.log("[App] menu-plugin-action event received:", event.payload);
+
+        // Use refs to get latest values (avoid closure issues)
+        const currentSelectedAssetIds = selectedAssetIdsRef.current;
+        const currentSelectedAssetId = selectedAssetIdRef.current;
+
+        console.log("[App] Selected asset IDs (store):", currentSelectedAssetIds);
+        console.log("[App] Selected asset ID (local):", currentSelectedAssetId);
+
+        // Prevent duplicate execution - use plugin name only as key
+        const executionKey = `plugin-${event.payload}`;
+        const now = Date.now();
+        const lastExecution = (window as any).__lastPluginExecutionTime?.[executionKey];
+
+        if (lastExecution && (now - lastExecution) < 500) {
+          console.log("[App] Duplicate execution detected (within 500ms), skipping");
+          return;
+        }
+
+        // Store execution time
+        if (!(window as any).__lastPluginExecutionTime) {
+          (window as any).__lastPluginExecutionTime = {};
+        }
+        (window as any).__lastPluginExecutionTime[executionKey] = now;
+
+        console.log("[App] Calling executePluginByName with:", event.payload);
+
+        // Pass the selected asset ID - prefer store selection, fallback to local selection
+        const assetId = currentSelectedAssetIds.length > 0 ? currentSelectedAssetIds[0] : currentSelectedAssetId || undefined;
+        console.log("[App] Using assetId:", assetId);
+
+        executePluginByName(event.payload, assetId).catch(err => {
+          console.error("[App] Failed to execute plugin:", err);
+        });
+      });
     };
 
     setupListener();
 
     return () => {
+      console.log('[App] Cleaning up listeners');
       unlistenImport?.();
+      unlistenSaveAs?.();
       unlistenCompress?.();
       unlistenSpritesheet?.();
       unlistenResize?.();
@@ -202,7 +287,10 @@ function AppContent() {
       unlistenExportLibrary?.();
       unlistenImportLibrary?.();
       unlistenPluginManager?.();
+      unlistenPluginAction?.();
       window.removeEventListener('plugin-notification', handlePluginNotification);
+      window.removeEventListener('asset-updated', handleAssetUpdated);
+      listenersSetupRef.current = false; // Reset so listeners can be set up again
     };
   }, []);
 
@@ -392,6 +480,10 @@ function AppContent() {
         open={showImageEditor}
         assetId={selectedAssetIds.length === 1 ? selectedAssetIds[0] : null}
         onClose={() => setShowImageEditor(false)}
+      />
+      <SaveAsDialog
+        open={showSaveAs}
+        onClose={() => setShowSaveAs(false)}
       />
       <CreateLibraryModal
         open={showCreateLibrary}

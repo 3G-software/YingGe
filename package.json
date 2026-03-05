@@ -1,7 +1,7 @@
 {
   "name": "yingge",
   "private": false,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "YingGe - A powerful game asset management tool with AI-powered tagging and organization",
   "author": {

@@ -31,6 +31,21 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const [hasDescriptor, setHasDescriptor] = useState(false);
   const [showFormatDialog, setShowFormatDialog] = useState(false);
+  const [imageRefreshKey, setImageRefreshKey] = useState(0);
+
+  // Listen for asset updates to refresh image
+  useEffect(() => {
+    const handleAssetUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.assetId === assetId) {
+        setImageRefreshKey(prev => prev + 1);
+        refetch();
+      }
+    };
+
+    window.addEventListener('asset-updated', handleAssetUpdate);
+    return () => window.removeEventListener('asset-updated', handleAssetUpdate);
+  }, [assetId, refetch]);
 
   useEffect(() => {
     // Check if this asset has a spritesheet descriptor
@@ -43,20 +58,17 @@ export function AssetDetail({ assetId, onClose }: AssetDetailProps) {
 
   useEffect(() => {
     if (detail?.asset.file_type === "image") {
-      console.log("[AssetDetail] Loading image for asset:", assetId, "file_type:", detail.asset.file_type);
       getAssetFilePath(assetId).then((path) => {
-        console.log("[AssetDetail] Got file path:", path);
-        const src = convertFileSrc(path);
-        console.log("[AssetDetail] Converted to src:", src);
+        // Add cache busting with timestamp and refreshKey
+        const src = convertFileSrc(path) + `?t=${Date.now()}-${imageRefreshKey}`;
         setFileSrc(src);
       }).catch((e) => {
         console.error("[AssetDetail] Failed to get file path:", e);
       });
     } else {
-      console.log("[AssetDetail] Not an image, file_type:", detail?.asset.file_type);
       setFileSrc(null);
     }
-  }, [assetId, detail]);
+  }, [assetId, detail, imageRefreshKey]);
 
   if (!detail) return null;
   const { asset, tags } = detail;

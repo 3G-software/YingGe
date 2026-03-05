@@ -30,10 +30,12 @@ pub fn run() {
 
             // Create File menu
             let import_item = MenuItemBuilder::with_id("import", "导入").build(app)?;
+            let save_as_item = MenuItemBuilder::with_id("save-as", "另存为").build(app)?;
             let export_library_item = MenuItemBuilder::with_id("export-library", "导出资源库").build(app)?;
             let import_library_item = MenuItemBuilder::with_id("import-library", "导入资源库").build(app)?;
             let file_menu = SubmenuBuilder::new(app, "文件")
                 .item(&import_item)
+                .item(&save_as_item)
                 .separator()
                 .item(&export_library_item)
                 .item(&import_library_item)
@@ -74,9 +76,23 @@ pub fn run() {
 
             // Create Plugins menu
             let plugin_manager_item = MenuItemBuilder::with_id("plugin-manager", "插件管理").build(app)?;
-            let plugins_menu = SubmenuBuilder::new(app, "插件")
-                .item(&plugin_manager_item)
-                .build()?;
+            let mut plugins_menu_builder = SubmenuBuilder::new(app, "插件")
+                .item(&plugin_manager_item);
+
+            // Add dynamic plugin menu items
+            if let Ok(plugin_items) = commands::plugin::get_plugin_menu_items(app.handle().clone()) {
+                if !plugin_items.is_empty() {
+                    plugins_menu_builder = plugins_menu_builder.separator();
+                    for plugin_item in plugin_items {
+                        // Use Chinese display name, fallback to name
+                        let display_name = plugin_item.display_name_zh
+                            .unwrap_or_else(|| plugin_item.name.clone());
+                        let item = MenuItemBuilder::with_id(&plugin_item.id, &display_name).build(app)?;
+                        plugins_menu_builder = plugins_menu_builder.item(&item);
+                    }
+                }
+            }
+            let plugins_menu = plugins_menu_builder.build()?;
 
             // Create Help menu
             let about_item = MenuItemBuilder::with_id("about", "关于").build(app)?;
@@ -105,7 +121,9 @@ pub fn run() {
             // Handle menu events
             app.on_menu_event(|app, event| {
                 let window = app.get_webview_window("main").unwrap();
-                match event.id().as_ref() {
+                let event_id = event.id().as_ref();
+
+                match event_id {
                     "settings" => {
                         let _ = window.eval("window.location.hash = '#/settings'");
                     }
@@ -114,6 +132,9 @@ pub fn run() {
                     }
                     "import" => {
                         let _ = window.emit("menu-import", ());
+                    }
+                    "save-as" => {
+                        let _ = window.emit("menu-save-as", ());
                     }
                     "tag-management" => {
                         let _ = window.eval("window.location.hash = '#/tags'");
@@ -154,7 +175,13 @@ pub fn run() {
                     "import-library" => {
                         let _ = window.emit("menu-import-library", ());
                     }
-                    _ => {}
+                    _ => {
+                        // Handle plugin menu items
+                        if event_id.starts_with("plugin-") {
+                            let plugin_name = event_id.strip_prefix("plugin-").unwrap_or("");
+                            let _ = window.emit("menu-plugin-action", plugin_name);
+                        }
+                    }
                 }
             });
 
@@ -231,11 +258,13 @@ pub fn run() {
             commands::processing::resize_image,
             commands::processing::save_edited_image,
             commands::processing::crop_image,
+            commands::processing::save_as,
             // Plugin commands
             commands::plugin::list_plugins,
             commands::plugin::read_plugin_file,
             commands::plugin::import_plugin,
             commands::plugin::uninstall_plugin,
+            commands::plugin::get_plugin_menu_items,
             // Menu commands
             commands::menu::update_menu_language,
             // Library IO commands

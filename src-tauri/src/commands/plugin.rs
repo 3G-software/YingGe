@@ -1,12 +1,109 @@
 use std::fs;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
+use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PluginInfo {
+    pub path: String,
+    pub is_builtin: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PluginMenuItem {
+    pub id: String,
+    pub name: String,
+    pub display_name_en: Option<String>,
+    pub display_name_zh: Option<String>,
+}
+
+/// Get plugin menu items
+#[tauri::command]
+pub fn get_plugin_menu_items(app: AppHandle) -> Result<Vec<PluginMenuItem>, AppError> {
+    let mut menu_items = Vec::new();
+
+    // Check development plugins directory (in project root)
+    if let Ok(dev_plugins_dir) = get_dev_plugins_dir(&app) {
+        if dev_plugins_dir.exists() {
+            if let Ok(entries) = fs::read_dir(&dev_plugins_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        let manifest_path = path.join("manifest.json");
+                        if manifest_path.exists() {
+                            if let Ok(content) = fs::read_to_string(&manifest_path) {
+                                if let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&content) {
+                                    if let Some(name) = manifest.get("name").and_then(|v| v.as_str()) {
+                                        let display_name_en = manifest.get("displayName")
+                                            .and_then(|d| d.get("en"))
+                                            .and_then(|v| v.as_str())
+                                            .map(|s| s.to_string());
+                                        let display_name_zh = manifest.get("displayName")
+                                            .and_then(|d| d.get("zh"))
+                                            .and_then(|v| v.as_str())
+                                            .map(|s| s.to_string());
+
+                                        menu_items.push(PluginMenuItem {
+                                            id: format!("plugin-{}", name),
+                                            name: name.to_string(),
+                                            display_name_en,
+                                            display_name_zh,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Check user-installed plugins directory (in app data)
+    let plugins_dir = get_plugins_dir(&app)?;
+    if plugins_dir.exists() {
+        for entry in fs::read_dir(&plugins_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                let manifest_path = path.join("manifest.json");
+                if manifest_path.exists() {
+                    if let Ok(content) = fs::read_to_string(&manifest_path) {
+                        if let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&content) {
+                            if let Some(name) = manifest.get("name").and_then(|v| v.as_str()) {
+                                let display_name_en = manifest.get("displayName")
+                                    .and_then(|d| d.get("en"))
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string());
+                                let display_name_zh = manifest.get("displayName")
+                                    .and_then(|d| d.get("zh"))
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string());
+
+                                menu_items.push(PluginMenuItem {
+                                    id: format!("plugin-{}", name),
+                                    name: name.to_string(),
+                                    display_name_en,
+                                    display_name_zh,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(menu_items)
+}
+
+
 /// List all installed plugins
 #[tauri::command]
-pub fn list_plugins(app: AppHandle) -> Result<Vec<String>, AppError> {
+pub fn list_plugins(app: AppHandle) -> Result<Vec<PluginInfo>, AppError> {
     let mut plugins = Vec::new();
 
     // Check development plugins directory (in project root)
@@ -23,7 +120,10 @@ pub fn list_plugins(app: AppHandle) -> Result<Vec<String>, AppError> {
                         if manifest_path.exists() {
                             println!("Found plugin manifest: {:?}", manifest_path);
                             if let Some(dir_name) = path.to_str() {
-                                plugins.push(dir_name.to_string());
+                                plugins.push(PluginInfo {
+                                    path: dir_name.to_string(),
+                                    is_builtin: true,
+                                });
                             }
                         }
                     }
@@ -51,7 +151,10 @@ pub fn list_plugins(app: AppHandle) -> Result<Vec<String>, AppError> {
                 let manifest_path = path.join("manifest.json");
                 if manifest_path.exists() {
                     if let Some(dir_name) = path.to_str() {
-                        plugins.push(dir_name.to_string());
+                        plugins.push(PluginInfo {
+                            path: dir_name.to_string(),
+                            is_builtin: false,
+                        });
                     }
                 }
             }
@@ -147,6 +250,16 @@ pub fn import_plugin(app: AppHandle, zip_path: String) -> Result<(), AppError> {
 /// Uninstall a plugin
 #[tauri::command]
 pub fn uninstall_plugin(app: AppHandle, name: String) -> Result<(), AppError> {
+    // Check if plugin is built-in
+    if let Ok(dev_plugins_dir) = get_dev_plugins_dir(&app) {
+        let dev_plugin_dir = dev_plugins_dir.join(&name);
+        if dev_plugin_dir.exists() {
+            return Err(AppError::InvalidInput(
+                "Cannot uninstall built-in plugins".to_string(),
+            ));
+        }
+    }
+
     let plugins_dir = get_plugins_dir(&app)?;
     let plugin_dir = plugins_dir.join(&name);
 

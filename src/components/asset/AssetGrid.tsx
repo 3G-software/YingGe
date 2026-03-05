@@ -302,7 +302,7 @@ export function AssetGrid({
       onContextMenu={handleContextMenu}
     >
       <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
-        {assets.map((asset) => (
+        {assets.map((asset, index) => (
           <div
             key={asset.id}
             ref={(el) => setCardRef(asset.id, el)}
@@ -310,6 +310,8 @@ export function AssetGrid({
           >
             <AssetCard
               asset={asset}
+              assetIndex={index}
+              allAssets={assets}
               onClick={() => onAssetClick(asset)}
             />
           </div>

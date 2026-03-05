@@ -19,6 +19,12 @@ pub fn generate_thumbnail(
     })?;
 
     let thumb_path = thumb_dir.join(format!("{}.png", asset_id));
+
+    // Delete old thumbnail if exists to ensure fresh write
+    if thumb_path.exists() {
+        let _ = std::fs::remove_file(&thumb_path);
+    }
+
     thumb.save(&thumb_path)?;
 
     let relative = thumb_path

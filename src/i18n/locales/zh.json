@@ -148,6 +148,8 @@
     "noPluginsInstalled": "未安装插件",
     "importPlugin": "导入插件",
     "uninstall": "卸载",
+    "builtin": "内置",
+    "cannotUninstallBuiltin": "无法卸载内置插件",
     "confirmUninstallPlugin": "确定要卸载此插件吗？",
     "pluginImportFailed": "导入插件失败",
     "pluginUninstallFailed": "卸载插件失败"
@@ -286,5 +288,18 @@
     "success": "保存成功",
     "successMessage": "编辑后的图片已保存到资源库",
     "processing": "保存中..."
+  },
+  "saveAs": {
+    "title": "另存为",
+    "selectOneAsset": "请选择一张图片",
+    "format": "输出格式",
+    "quality": "质量",
+    "save": "保存",
+    "saving": "保存中...",
+    "success": "保存成功",
+    "error": "保存失败",
+    "icoNote": "ICO 格式适用于 Windows 图标文件",
+    "icnsNote": "ICNS 格式适用于 macOS 图标文件",
+    "jpegNote": "JPEG 格式会丢失透明度信息"
   }
 }

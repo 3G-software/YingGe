@@ -1,5 +1,9 @@
 {
   "name": "crop-image-plugin",
+  "displayName": {
+    "en": "Crop Image",
+    "zh": "裁剪图片"
+  },
   "version": "1.0.0",
   "description": "A plugin that adds image cropping functionality to YingGe",
   "author": "YingGe Team",
@@ -23,6 +27,19 @@
       },
       "icon": "crop",
       "context": "asset-single"
+    },
+    {
+      "id": "open-crop-dialog",
+      "label": {
+        "en": "Open Crop Tool",
+        "zh": "打开裁剪工具"
+      },
+      "description": {
+        "en": "Open the crop image dialog",
+        "zh": "打开图片裁剪对话框"
+      },
+      "icon": "crop",
+      "context": "global"
     }
   ],
   "i18n": {

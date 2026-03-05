@@ -91,7 +91,14 @@ export function PluginManagerDialog({ open, onClose }: PluginManagerDialogProps)
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-semibold">{plugin.manifest.name}</h3>
+                      <h3 className="font-semibold">
+                        {plugin.manifest.name}
+                        {plugin.isBuiltin && (
+                          <span className="ml-2 text-xs bg-blue-600 px-2 py-0.5 rounded">
+                            {t('builtin')}
+                          </span>
+                        )}
+                      </h3>
                       <p className="text-sm text-text-secondary mt-1">
                         {plugin.manifest.description}
                       </p>
@@ -103,8 +110,9 @@ export function PluginManagerDialog({ open, onClose }: PluginManagerDialogProps)
                     </div>
                     <button
                       onClick={() => handleUninstall(plugin.manifest.name)}
-                      disabled={loading}
-                      className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
+                      disabled={loading || plugin.isBuiltin}
+                      className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={plugin.isBuiltin ? t('cannotUninstallBuiltin') : ''}
                     >
                       {t('uninstall')}
                     </button>

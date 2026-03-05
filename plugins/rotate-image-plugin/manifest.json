@@ -1,0 +1,67 @@
+{
+  "name": "rotate-image-plugin",
+  "displayName": {
+    "en": "Rotate Image",
+    "zh": "旋转图片"
+  },
+  "version": "1.0.0",
+  "description": "Rotate images by 90, 180, or 270 degrees",
+  "author": "YingGe Team",
+  "license": "MIT",
+  "entry": "index.js",
+  "permissions": [
+    "asset:read",
+    "asset:write"
+  ],
+  "actions": [
+    {
+      "id": "rotate-90",
+      "label": {
+        "en": "Rotate 90° CW",
+        "zh": "顺时针旋转90°"
+      },
+      "description": {
+        "en": "Rotate image 90 degrees clockwise",
+        "zh": "顺时针旋转图片90度"
+      },
+      "icon": "rotate-cw",
+      "context": "asset-single"
+    },
+    {
+      "id": "rotate-180",
+      "label": {
+        "en": "Rotate 180°",
+        "zh": "旋转180°"
+      },
+      "description": {
+        "en": "Rotate image 180 degrees",
+        "zh": "旋转图片180度"
+      },
+      "icon": "rotate-cw",
+      "context": "asset-single"
+    },
+    {
+      "id": "rotate-270",
+      "label": {
+        "en": "Rotate 90° CCW",
+        "zh": "逆时针旋转90°"
+      },
+      "description": {
+        "en": "Rotate image 90 degrees counter-clockwise",
+        "zh": "逆时针旋转图片90度"
+      },
+      "icon": "rotate-ccw",
+      "context": "asset-single"
+    }
+  ],
+  "i18n": {
+    "en": {
+      "rotateSuccess": "Image rotated successfully",
+      "rotateFailed": "Failed to rotate image"
+    },
+    "zh": {
+      "rotateSuccess": "图片旋转成功",
+      "rotateFailed": "图片旋转失败"
+    }
+  }
+}

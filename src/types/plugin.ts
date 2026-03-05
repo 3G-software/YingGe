@@ -5,10 +5,16 @@ export interface PluginManifest {
   author: string;
   license: string;
   entry: string;
+  dialog?: string; // Optional: path to dialog component file
   permissions: string[];
   actions: PluginAction[];
   i18n?: Record<string, Record<string, string>>;
   settings?: PluginSetting[];
+}
+
+export interface PluginInfo {
+  path: string;
+  is_builtin: boolean;
 }
 
 export interface PluginAction {
@@ -56,4 +62,5 @@ export interface LoadedPlugin {
   manifest: PluginManifest;
   module: any;
   enabled: boolean;
+  isBuiltin: boolean;
 }

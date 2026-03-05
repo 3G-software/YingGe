@@ -6,6 +6,7 @@ import type {
   PluginAPI,
   PluginUI,
   PluginI18n,
+  PluginInfo,
 } from '../types/plugin';
 
 class PluginLoader {
@@ -16,52 +17,70 @@ class PluginLoader {
     try {
       // Get list of plugins from backend
       console.log('[PluginLoader] Loading plugins...');
-      const pluginDirs: string[] = await invoke('list_plugins');
-      console.log('[PluginLoader] Found plugin directories:', pluginDirs);
+      const pluginInfos: PluginInfo[] = await invoke('list_plugins');
+      console.log('[PluginLoader] Found plugin directories:', pluginInfos);
+      console.log('[PluginLoader] Plugin infos type:', typeof pluginInfos, Array.isArray(pluginInfos));
+      console.log('[PluginLoader] Plugin infos length:', pluginInfos?.length);
 
-      for (const pluginDir of pluginDirs) {
-        await this.loadPlugin(pluginDir);
+      if (!Array.isArray(pluginInfos)) {
+        console.error('[PluginLoader] list_plugins did not return an array:', pluginInfos);
+        return;
+      }
+
+      for (const pluginInfo of pluginInfos) {
+        console.log('[PluginLoader] Processing plugin info:', pluginInfo);
+        await this.loadPlugin(pluginInfo.path, pluginInfo.is_builtin);
       }
 
       console.log('[PluginLoader] Loaded plugins:', Array.from(this.plugins.keys()));
+      console.log('[PluginLoader] Total plugins in map:', this.plugins.size);
     } catch (error) {
-      console.error('Failed to load plugins:', error);
+      console.error('[PluginLoader] Failed to load plugins:', error);
+      console.error('[PluginLoader] Error stack:', error instanceof Error ? error.stack : 'No stack');
     }
   }
 
-  async loadPlugin(pluginDir: string): Promise<void> {
+  async loadPlugin(pluginDir: string, isBuiltin: boolean = false): Promise<void> {
     try {
       console.log('[PluginLoader] Loading plugin from:', pluginDir);
       // Read manifest
       const manifestPath = `${pluginDir}/manifest.json`;
+      console.log('[PluginLoader] Reading manifest from:', manifestPath);
       const manifestContent: string = await invoke('read_plugin_file', {
         path: manifestPath,
       });
+      console.log('[PluginLoader] Manifest content:', manifestContent);
       const manifest: PluginManifest = JSON.parse(manifestContent);
       console.log('[PluginLoader] Loaded manifest:', manifest.name);
 
       // Read entry file
       const entryPath = `${pluginDir}/${manifest.entry}`;
+      console.log('[PluginLoader] Reading entry file from:', entryPath);
       const entryContent: string = await invoke('read_plugin_file', {
         path: entryPath,
       });
+      console.log('[PluginLoader] Entry file loaded, length:', entryContent.length);
 
       // Create plugin context
       const context = this.createPluginContext(manifest);
 
       // Execute plugin code in isolated scope
+      console.log('[PluginLoader] Executing plugin code...');
       const pluginModule = this.executePluginCode(entryContent, context);
+      console.log('[PluginLoader] Plugin module:', pluginModule);
 
       // Store loaded plugin
       this.plugins.set(manifest.name, {
         manifest,
         module: pluginModule,
         enabled: true,
+        isBuiltin,
       });
 
-      console.log(`Plugin loaded: ${manifest.name} v${manifest.version}`);
+      console.log(`[PluginLoader] Plugin loaded successfully: ${manifest.name} v${manifest.version}`);
     } catch (error) {
-      console.error(`Failed to load plugin from ${pluginDir}:`, error);
+      console.error(`[PluginLoader] Failed to load plugin from ${pluginDir}:`, error);
+      console.error('[PluginLoader] Error details:', error);
     }
   }
 
@@ -101,10 +120,12 @@ class PluginLoader {
 
     const ui: PluginUI = {
       showNotification: (options) => {
+        console.log('[PluginLoader] showNotification called with:', options);
         // This will be connected to the app's notification system
-        window.dispatchEvent(
-          new CustomEvent('plugin-notification', { detail: options })
-        );
+        const event = new CustomEvent('plugin-notification', { detail: options });
+        console.log('[PluginLoader] Dispatching event:', event);
+        window.dispatchEvent(event);
+        console.log('[PluginLoader] Event dispatched');
       },
       showDialog: (component) => {
         window.dispatchEvent(
@@ -129,7 +150,11 @@ class PluginLoader {
   }
 
   getPlugins(): LoadedPlugin[] {
-    return Array.from(this.plugins.values());
+    const plugins = Array.from(this.plugins.values());
+    console.log('[PluginLoader] getPlugins called, returning:', plugins.length, 'plugins');
+    console.log('[PluginLoader] Plugins map size:', this.plugins.size);
+    console.log('[PluginLoader] Plugins map keys:', Array.from(this.plugins.keys()));
+    return plugins;
   }
 
   getPlugin(name: string): LoadedPlugin | undefined {

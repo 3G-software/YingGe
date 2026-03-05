@@ -672,7 +672,7 @@ pub async fn resize_image(
 #[tauri::command]
 pub async fn save_edited_image(
     asset_id: String,
-    image_data: String, // base64 encoded PNG
+    image_data: String, // base64 encoded PNG (with or without data URL prefix)
     pool: State<'_, SqlitePool>,
 ) -> Result<Asset, AppError> {
     use base64::Engine;
@@ -681,9 +681,16 @@ pub async fn save_edited_image(
     let library = queries::get_library(&pool, &asset.library_id).await?;
     let library_root = std::path::Path::new(&library.root_path);
 
+    // Handle both formats: "data:image/png;base64,..." and raw base64
+    let base64_data = if image_data.contains(',') {
+        image_data.split(',').nth(1).unwrap_or(&image_data)
+    } else {
+        &image_data
+    };
+
     // Decode base64 image data
     let image_bytes = base64::engine::general_purpose::STANDARD
-        .decode(&image_data)
+        .decode(base64_data)
         .map_err(|e| AppError::InvalidInput(format!("Invalid base64 data: {}", e)))?;
 
     // Load image to get dimensions
@@ -735,7 +742,8 @@ pub async fn save_edited_image(
     // Update the asset in database
     let saved = queries::update_asset(&pool, &updated_asset).await?;
 
-    tracing::info!("Image edited and saved (replaced original): {}", saved.file_name);
+    tracing::info!("Image edited and saved (replaced original): {} ({}x{})",
+        saved.file_name, img.width(), img.height());
 
     Ok(saved)
 }
@@ -813,3 +821,180 @@ pub async fn crop_image(
     Ok(saved)
 }
 
+/// Save asset as a different format
+#[tauri::command]
+pub async fn save_as(
+    asset_id: String,
+    output_path: String,
+    format: String, // "png", "jpeg", "ico", "icns"
+    quality: Option<u8>, // For JPEG quality (1-100)
+    pool: State<'_, SqlitePool>,
+) -> Result<(), AppError> {
+    tracing::info!("Saving asset {} as {} to: {}", asset_id, format, output_path);
+
+    let asset = queries::get_asset(&pool, &asset_id).await?;
+    let library = queries::get_library(&pool, &asset.library_id).await?;
+    let library_root = std::path::Path::new(&library.root_path);
+    let source_path = library_root.join(&asset.relative_path);
+
+    // Load the image
+    let img = image::open(&source_path)
+        .map_err(|e| AppError::InvalidInput(format!("Failed to open image: {}", e)))?;
+
+    let output_path_buf = std::path::PathBuf::from(&output_path);
+
+    // Ensure output directory exists
+    if let Some(parent) = output_path_buf.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    match format.to_lowercase().as_str() {
+        "png" => {
+            img.save_with_format(&output_path_buf, image::ImageFormat::Png)
+                .map_err(|e| AppError::InvalidInput(format!("Failed to save PNG: {}", e)))?;
+        }
+        "jpeg" | "jpg" => {
+            let rgb_img = img.to_rgb8();
+            let quality = quality.unwrap_or(90).clamp(1, 100);
+            let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(
+                std::fs::File::create(&output_path_buf)?,
+                quality,
+            );
+            encoder.encode(
+                rgb_img.as_raw(),
+                rgb_img.width(),
+                rgb_img.height(),
+                image::ExtendedColorType::Rgb8,
+            ).map_err(|e| AppError::InvalidInput(format!("Failed to save JPEG: {}", e)))?;
+        }
+        "ico" => {
+            // ICO format: convert to RGBA and save
+            let rgba_img = img.to_rgba8();
+            let ico_data = create_ico_data(&rgba_img)?;
+            std::fs::write(&output_path_buf, ico_data)?;
+        }
+        "icns" => {
+            // ICNS format: macOS icon format
+            let rgba_img = img.to_rgba8();
+            let icns_data = create_icns_data(&rgba_img)?;
+            std::fs::write(&output_path_buf, icns_data)?;
+        }
+        _ => {
+            return Err(AppError::InvalidInput(format!("Unsupported format: {}", format)));
+        }
+    }
+
+    tracing::info!("Image saved successfully to: {}", output_path);
+    Ok(())
+}
+
+// Helper function to create ICO data
+fn create_ico_data(img: &image::RgbaImage) -> Result<Vec<u8>, AppError> {
+    let width = img.width();
+    let height = img.height();
+
+    // ICO file structure
+    let mut ico_data = Vec::new();
+
+    // ICONDIR header
+    ico_data.extend_from_slice(&[0, 0]); // Reserved
+    ico_data.extend_from_slice(&[1, 0]); // Type: 1 for ICO
+    ico_data.extend_from_slice(&[1, 0]); // Number of images: 1
+
+    // ICONDIRENTRY
+    ico_data.push(if width <= 255 { width as u8 } else { 0 }); // Width (0 means 256)
+    ico_data.push(if height <= 255 { height as u8 } else { 0 }); // Height (0 means 256)
+    ico_data.push(0); // Color palette (0 for true color)
+    ico_data.push(0); // Reserved
+    ico_data.extend_from_slice(&[1, 0]); // Color planes
+    ico_data.extend_from_slice(&[32, 0]); // Bits per pixel (32 for RGBA)
+
+    // Convert image to PNG for embedding in ICO
+    let mut png_data = Vec::new();
+    {
+        let mut cursor = std::io::Cursor::new(&mut png_data);
+        img.write_to(&mut cursor, image::ImageFormat::Png)
+            .map_err(|e| AppError::InvalidInput(format!("Failed to encode PNG: {}", e)))?;
+    }
+
+    let image_size = png_data.len() as u32;
+    let image_offset = 22u32; // Size of ICONDIR + ICONDIRENTRY
+
+    ico_data.extend_from_slice(&image_size.to_le_bytes());
+    ico_data.extend_from_slice(&image_offset.to_le_bytes());
+
+    // Append PNG data
+    ico_data.extend_from_slice(&png_data);
+
+    Ok(ico_data)
+}
+
+// Helper function to create ICNS data
+fn create_icns_data(img: &image::RgbaImage) -> Result<Vec<u8>, AppError> {
+    let width = img.width();
+    let height = img.height();
+
+    // ICNS file structure
+    let mut icns_data = Vec::new();
+
+    // ICNS header
+    icns_data.extend_from_slice(b"icns"); // Magic number
+
+    // Determine icon type based on size
+    let icon_type = match (width, height) {
+        (16, 16) => b"icp4",
+        (32, 32) => b"icp5",
+        (64, 64) => b"icp6",
+        (128, 128) => b"ic07",
+        (256, 256) => b"ic08",
+        (512, 512) => b"ic09",
+        (1024, 1024) => b"ic10",
+        _ => {
+            // For non-standard sizes, resize to nearest standard size
+            let target_size = if width <= 16 { 16 }
+                else if width <= 32 { 32 }
+                else if width <= 64 { 64 }
+                else if width <= 128 { 128 }
+                else if width <= 256 { 256 }
+                else if width <= 512 { 512 }
+                else { 1024 };
+
+            let resized = image::imageops::resize(
+                img,
+                target_size,
+                target_size,
+                image::imageops::FilterType::Lanczos3,
+            );
+
+            return create_icns_data(&resized);
+        }
+    };
+
+    // Convert to PNG
+    let mut png_data = Vec::new();
+    {
+        let mut cursor = std::io::Cursor::new(&mut png_data);
+        img.write_to(&mut cursor, image::ImageFormat::Png)
+            .map_err(|e| AppError::InvalidInput(format!("Failed to encode PNG: {}", e)))?;
+    }
+
+    // Icon element
+    let element_size = (8 + png_data.len()) as u32;
+
+    // Placeholder for file size (will update later)
+    let file_size_pos = icns_data.len();
+    icns_data.extend_from_slice(&[0, 0, 0, 0]);
+
+    // Icon element header
+    icns_data.extend_from_slice(icon_type);
+    icns_data.extend_from_slice(&element_size.to_be_bytes());
+
+    // PNG data
+    icns_data.extend_from_slice(&png_data);
+
+    // Update file size in header
+    let file_size = icns_data.len() as u32;
+    icns_data[file_size_pos..file_size_pos + 4].copy_from_slice(&file_size.to_be_bytes());
+
+    Ok(icns_data)
+}
